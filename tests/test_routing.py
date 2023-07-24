@@ -1,5 +1,5 @@
 import unittest
-from dht.routingTable import RoutingTable, KBucket
+from dht.routing_table import RoutingTable, KBucket
 from dht.hashes import Hash
 
 class TestDHTHashes(unittest.TestCase):
