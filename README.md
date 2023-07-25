@@ -12,11 +12,14 @@ The code includes a simple logic implementation of a `DHTClient`, which includes
 - [x] logical `RoutingTable` and `KBucket` that can: 
     - [x] fill its kbuckets with the XX closest peers sharing YY bits with our `NodeID`
     - [x] Give back the closest XX peers to a given Hash
-- [ ] basic `DHTClient` operations, such as:
-    - [ ] bootstrap and fill up the routing table from ZZ nodes
-    - [ ] lookup for the closest XX peers to a given Hash
-    - [ ] Provide a `BPID` to the network
-    - [ ] Retrieve a `BPID` from the network
+- [x] basic `DHTClient` operations, such as:
+    - [x] create a Network interface that can link all the nodes in the network
+    - [x] bootstrap and fill up the routing table from ZZ nodes
+    - [x] lookup for the closest XX peers to a given Hash
+    - [x] Provide a `BPID` to the network
+    - [x] Retrieve a `BPID` from the network
+- [ ] Make the DHT compatible with random delays and error rates
+    - [ ] make randomness and hashes deterministic
 
 ## Maintainer
 [@cortze](https://github.com/cortze)
