@@ -3,6 +3,7 @@ import ctypes
 # TODO: swapt hash to SHA256 with the possibility of reusing a given seed for reproducibility
 # at the moment, I'm using the default 64bit hash function from Python
 HASH_BASE = 64
+
 class Hash():
     def __init__(self, value):
         """ basic representation of a Hash object for the DHT, which includes the main utilities related to a hash """

@@ -34,10 +34,10 @@ class RoutingTable():
                 dist = nH.xor_to_hash(key)
                 closestNodes[n] = dist
         # sort the dict based on dist 
-        closestNodes = dict(sorted(closestNodes.items(), key=lambda item: item[1])[:self.bucketSize-1])
+        closestNodes = dict(sorted(closestNodes.items(), key=lambda item: item[1])[:self.bucketSize])
         return closestNodes
 
-    def get_routing_node(self):
+    def get_routing_nodes(self):
         # get the closest nodes to the peer
         rtNodes = []
         for b in self.kbuckets:

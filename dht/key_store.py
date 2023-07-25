@@ -16,7 +16,12 @@ class KeyValueStore():
 
     def read(self, key:Hash):
         """ reads a value for the given Key, or return false if it wasn't found """
-        value, ok = self.storage[key.value]
+        try: 
+            value = self.storage[key.value]
+            ok = True
+        except KeyError:
+            value = ""
+            ok = False
         return value, ok 
 
     def summary(self) -> int:

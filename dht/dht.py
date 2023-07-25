@@ -12,12 +12,12 @@ class DHTClient():
     def __repr__(self) -> str:
         return "DHT-cli-"+self.ID
 
-    def __init__(self, ID, network, kbucketSize:int = 20, a: int = 1, b: int = 20, stuckMaxCnt = 4):
+    def __init__(self, id, network, kbucketSize:int = 20, a: int = 1, b: int = 20, stuckMaxCnt = 3):
         """ client builder -> init all the internals & compose the routing table"""
         # TODO: on the options given for the DHTClient, we could consider:
         # - latency distribution (how much time to wait before giving back any reply)
         # - Kbucket size
-        self.ID = ID
+        self.ID = id
         self.network = network
         self.k = kbucketSize
         self.rt = RoutingTable(self.ID, kbucketSize)
@@ -39,66 +39,82 @@ class DHTClient():
     def lookup_for_hash(self, key: Hash):
         """ search for the closest peers to any given key, starting the lookup for the closest nodes in 
         the local routing table, and contacting Alpha nodes in parallel """
-        # lookup first on our routing table
-        closestNodes = self.rt.get_closest_nodes_to(key)
-        closestNode = min(closestNodes, key=closestNodes.get)
-        prevClosestNode = 0
-        procStuckCnt = 0
-        attpNodes = [] # avoid contacting twice to the same peers
         lookupSummary = {
             'targetKey': key,
             'startTime': time.time(),
+            'connectionAttempts': 0,
             'successfulCons': 0,
             'failedCons': 0,
         }
-        # Ask for the key to the closest nodes in our routing table
-        # untill the no closest node was found in 3 consecutive iterations 
-        while (closestNode != prevClosestNode) or (procStuckCnt < self.lookupStuckMaxCnt):
-            # concurrencly of Alpha 
-            concurrency = 0
-            for cn in closestNodes: # close node should be sorted
-                # check if we already contacted this node in the same lookup
-                if cn in attpNodes:
+
+        closestNodes = self.rt.get_closest_nodes_to(key)
+        nodesToTry = closestNodes.copy()
+        newNodes = {}
+        lookupValue = ""
+        stuckCnt = 0
+        concurrency = 0
+        def has_closer_nodes(prev, new):
+            for node, dist in new.items():
+                if node in prev:
                     continue
+                for _, existingDist in prev.items():
+                    if dist < existingDist:
+                        return True
+                    else:
+                        continue
+            return False
+
+        def not_tracked(total, newones):
+            newNodes = {} 
+            for node, dist in newones.items():
+                if node not in total:
+                    newNodes[node] = dist
+            return newNodes
+        
+        while (stuckCnt < self.lookupStuckMaxCnt) and (len(nodesToTry) > 0) : 
+            # ask queued nodes to try
+            for node in list(nodesToTry):
+                lookupSummary['connectionAttempts'] += 1
                 try: 
-                    connection = self.network.connect_to_node(self.ID, cn)
-                    lookupSummary['successfulCons'] += 1 
+                    connection = self.network.connect_to_node(self.ID, node)
+                    newNodes, val, ok = connection.get_closest_nodes_to(key)
+                    if ok:
+                        lookupValue = val
+                    lookupSummary['successfulCons'] += 1
+                    if has_closer_nodes(closestNodes, newNodes):
+                        stuckCnt = 0
+                        nonTrackedNodes = not_tracked(closestNodes, newNodes)
+                        closestNodes.update(nonTrackedNodes)
+                        nodesToTry.update(nonTrackedNodes)
+                        nodesToTry = dict(sorted(nodesToTry.items(), key= lambda item: item[1]))
+                    else: 
+                        stuckCnt += 1
                 except ConnectionError:
-                    lookupSummary['failedCons'] += 1 
-                    continue
-                response = connection.get_closest_nodes_to(key)
-                # add the nodes to the list, sort it and update the closest node
-                closestNodes.update(response)
-                closestNodes = dict(sorted(closestNodes.items(), key=lambda item: item[1]))
-                newCloseNode = min(closestNodes, key= closestNodes.get)
-                if newCloseNode != prevClosestNode:
-                    procStuckCnt = 0
-                    prevClosestNode = newCloseNode
-                else:
-                    procStuckCnt += 1
-                attpNodes.append(cn)
-                concurrency += 1
-                if concurrency > self.alpha:
+                    lookupSummary['failedCons'] += 1
+                    stuckCnt += 1
+                concurrency += 1 
+                if concurrency >= self.alpha:
                     break
             else:
-                # limit of concurrency reached
+                # concurrency limit reached, refresh who to ask later
                 pass
+
         # finish with the summary
         lookupSummary.update({
             'finishTime': time.time(),
-            'contactedNodes': len(attpNodes),
             'totalNodes': len(closestNodes),
+            'value': lookupValue,
         })
         # limit the ouput to beta number of nodes
-        closestNodes.pop(list(closestNodes)[self.beta:])
-        return closestNodes, lookupSummary
+        closestNodes = dict(sorted(closestNodes.items(), key=lambda item: item[1])[:self.beta])
+        return closestNodes, lookupValue, lookupSummary
 
     def get_closest_nodes_to(self, key: Hash):
         """ return the closest nodes to a given key from the local routing table (local perception of the network) """
         # check if we actually have the value of KeyValueStore, and return the content
         closerNodes = self.rt.get_closest_nodes_to(key)
-        val, _ = self.ks.read(key)
-        return closerNodes, val
+        val, ok = self.ks.read(key)
+        return closerNodes, val, ok
 
     def provide_block_segment(self, segment) -> dict:
         """ looks for the closest nodes in the network, and sends them a """
@@ -108,7 +124,7 @@ class DHTClient():
             'startTime': time.time(),
         }
         segH = Hash(segment)
-        closestNodes, lookupSummary = self.lookup_for_hash(segH)
+        closestNodes, _, lookupSummary = self.lookup_for_hash(segH)
         for cn in closestNodes:
             try:
                 connection = self.network.connect_to_node(self.ID, cn)
@@ -118,8 +134,9 @@ class DHTClient():
                 provideSummary['failedNodeIDs'].append(cn)
 
         provideSummary.update({
+            'closestNodes': closestNodes.keys(),
             'finishTime': time.time(),
-            'contactedPeers': lookupSummary['contactedNodes'],
+            'contactedPeers': lookupSummary['connectionAttempts'],
         })
         return provideSummary
 
@@ -188,7 +205,7 @@ class Connection():
         self.f = f
         self.to = to
 
-    def get_close_nodes_to(self, key: Hash):
+    def get_closest_nodes_to(self, key: Hash):
         return self.to.get_closest_nodes_to(key)
 
     def store_segment(self, segment):
@@ -247,14 +264,15 @@ class DHTNetwork():
         return rt.get_routing_nodes()
 
     def summary(self):
-        """ print the summary of what happened in the network """  
+        """ return the summary of what happened in the network """  
         return {
             'total_nodes': self.nodeStore.len(),
             'attempts': self.connectionCnt,
             'successful': len(self.connectionTracker),
             'failures': len(self.errorTracker)}
 
-
+    def len(self) -> int:
+        return self.nodeStore.len()
 
 
 
