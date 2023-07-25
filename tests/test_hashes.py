@@ -19,12 +19,12 @@ class TestDHTHashes(unittest.TestCase):
         for id in ids:
             hash_obj = Hash(id)
             plain_hash = ctypes.c_ulong(hash(hex(id))).value
-            distance = hash_obj.xorTo(plain_hash)
+            distance = hash_obj.xor_to(plain_hash)
             self.assertEqual(distance, 0)
         for id in ids:
             hash_obj = Hash(id)
             plain_hash = ctypes.c_ulong(hash(hex(id+1))).value
-            distance = hash_obj.xorTo(plain_hash)
+            distance = hash_obj.xor_to(plain_hash)
             self.assertNotEqual(distance, 0)
 
     def test_bit_array(self):
@@ -34,19 +34,19 @@ class TestDHTHashes(unittest.TestCase):
         bitArray_4 = BitArray(8, 4) 
 
         # Checks
-        self.assertEqual(bitArray_1.upperSharingBits(bitArray_1), 4)
-        self.assertEqual(bitArray_1.upperSharingBits(bitArray_2), 2)
-        self.assertEqual(bitArray_1.upperSharingBits(bitArray_3), 1)
-        self.assertEqual(bitArray_1.upperSharingBits(bitArray_4), 0)
+        self.assertEqual(bitArray_1.upper_sharing_bits(bitArray_1), 4)
+        self.assertEqual(bitArray_1.upper_sharing_bits(bitArray_2), 2)
+        self.assertEqual(bitArray_1.upper_sharing_bits(bitArray_3), 1)
+        self.assertEqual(bitArray_1.upper_sharing_bits(bitArray_4), 0)
 
-        self.assertEqual(bitArray_2.upperSharingBits(bitArray_2), 4)
-        self.assertEqual(bitArray_2.upperSharingBits(bitArray_3), 1)
-        self.assertEqual(bitArray_2.upperSharingBits(bitArray_4), 0)
+        self.assertEqual(bitArray_2.upper_sharing_bits(bitArray_2), 4)
+        self.assertEqual(bitArray_2.upper_sharing_bits(bitArray_3), 1)
+        self.assertEqual(bitArray_2.upper_sharing_bits(bitArray_4), 0)
         
-        self.assertEqual(bitArray_3.upperSharingBits(bitArray_3), 4)
-        self.assertEqual(bitArray_3.upperSharingBits(bitArray_4), 0)
+        self.assertEqual(bitArray_3.upper_sharing_bits(bitArray_3), 4)
+        self.assertEqual(bitArray_3.upper_sharing_bits(bitArray_4), 0)
 
-        self.assertEqual(bitArray_4.upperSharingBits(bitArray_4), 4)
+        self.assertEqual(bitArray_4.upper_sharing_bits(bitArray_4), 4)
 
 if __name__ == '__main__':
     unittest.main()

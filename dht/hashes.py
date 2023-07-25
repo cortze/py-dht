@@ -6,10 +6,11 @@ HASH_BASE = 64
 class Hash():
     def __init__(self, value):
         """ basic representation of a Hash object for the DHT, which includes the main utilities related to a hash """
-        self.value = self.hashKey(value)
+        self.value = self.hash_key(value)
         self.bitArray = BitArray(self.value, HASH_BASE)
+        # TODO: the hash values could be reproduced if the ENVIRONMENT VARIABLE PYTHONHASHSEED is set to a 64 bit integer https://docs.python.org/3/using/cmdline.html#envvar-PYTHONHASHSEED
 
-    def hashKey(self, key):
+    def hash_key(self, key):
         """ creates a hash value for the given Key """
         # If the key is a plain integer, use the hex encoding to generate more entropy on the hash
         if isinstance(key, int):
@@ -18,20 +19,20 @@ class Hash():
         # ensure that the hash is unsigned
         return ctypes.c_ulong(h).value
  
-    def xorTo(self, targetHash:int) -> int:
+    def xor_to(self, targetHash:int) -> int:
         """ Returns the XOR distance between both hash values"""
         distance = self.value ^ targetHash
         return ctypes.c_ulong(distance).value
 
-    def xorToHash(self, targetHash) -> int:
+    def xor_to_hash(self, targetHash) -> int:
         """ Returns the XOR distance between both hash values"""
         distance = self.value ^ targetHash.value
         return ctypes.c_ulong(distance).value
 
-    def sharedUpperBits(self, targetHash) -> int:
+    def shared_upper_bits(self, targetHash) -> int:
         """ returns the number of upper sharing bits between 2 hash values """
         targetBits = BitArray(targetHash.value, HASH_BASE)
-        sBits = self.bitArray.upperSharingBits(targetBits)
+        sBits = self.bitArray.upper_sharing_bits(targetBits)
         return sBits
 
     def __repr__(self) -> str:
@@ -40,10 +41,10 @@ class Hash():
     def __eq__(self, targetHash) -> bool:
         return self.value == targetHash.value
 
-    def isSmallerThan(self, targetHash) -> bool:
+    def is_smaller_than(self, targetHash) -> bool:
         return self.value < targetHash.value 
 
-    def isGreaterThan(self, targetHash) -> bool:
+    def is_greater_than(self, targetHash) -> bool:
         return self.value > targetHash.value 
 
 class BitArray():
@@ -55,16 +56,16 @@ class BitArray():
     def __repr__(self):
         return str(self.bitArray)
 
-    def upperSharingBits(self, targetBitArray) -> int:
+    def upper_sharing_bits(self, targetBitArray) -> int:
         sBits = 0
         for i, bit in enumerate(self.bitArray):
-            if bit == targetBitArray.getXBit(i):
+            if bit == targetBitArray.get_x_bit(i):
                 sBits += 1
             else:
                 break 
         return sBits
 
-    def getXBit(self, idx:int = 0):
+    def get_x_bit(self, idx:int = 0):
         return self.bitArray[idx]
 
     def bin(self, n):

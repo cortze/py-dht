@@ -13,20 +13,20 @@ class TestDHTHashes(unittest.TestCase):
         ogDistances = []
         for id in remoteIDs:
             h = Hash(id)
-            ogDistances.append(localH.xorToHash(h))
-            kbucket.addPeerToBucket(id)
+            ogDistances.append(localH.xor_to_hash(h))
+            kbucket.add_peer_to_bucket(id)
         
         # Firts, check the bucket didn't go beyond the size
         self.assertEqual(kbucket.len(), bucketSize)
 
         distances = ogDistances.copy()
         # Second, ensure that the bucket has in fact the closest nodeIDs to the local ID
-        closeNodesInBucket = kbucket.getXNodesCloseTo(localH, bucketSize)
+        closeNodesInBucket = kbucket.get_x_nodes_close_to(localH, bucketSize)
         for node in closeNodesInBucket:
             minDist = min(distances)
-            minIdx = getIndexOfValue(ogDistances, minDist)
+            minIdx = get_index_of_value(ogDistances, minDist)
             self.assertEqual(node, remoteIDs[minIdx])
-            distances = removeItemFromArray(distances, getIndexOfValue(distances, minDist))
+            distances = remove_item_from_array(distances, get_index_of_value(distances, minDist))
 
     def test_routing_table(self):
         totalNodes = 40
@@ -42,13 +42,13 @@ class TestDHTHashes(unittest.TestCase):
         distances = []
         for id in remoteIDs:
             idH = Hash(id)
-            sBits = localH.sharedUpperBits(idH)
-            dist = localH.xorToHash(idH)
+            sBits = localH.shared_upper_bits(idH)
+            dist = localH.xor_to_hash(idH)
             if sBits not in bucketControl.keys():
                 bucketControl[sBits] = 0
             bucketControl[sBits] += 1
             sharedBits[id] = sBits
-            routingTable.newDiscoveredPeer(id)
+            routingTable.new_discovered_peer(id)
             distances.append(dist) 
       
 #       print("summary of the rt:")
@@ -78,8 +78,8 @@ class TestDHTHashes(unittest.TestCase):
         for b in routingTable.kbuckets:
             for node in b.bucketNodes:
                 nodeH = Hash(node)
-                sharedBits[node] = nodeH.sharedUpperBits(randomH)
-                distanceToHash.append(nodeH.xorToHash(randomH))
+                sharedBits[node] = nodeH.shared_upper_bits(randomH)
+                distanceToHash.append(nodeH.xor_to_hash(randomH))
                 rtNodes.append(node)
 
 #       print("summary of the lookup:")
@@ -88,22 +88,22 @@ class TestDHTHashes(unittest.TestCase):
 #       print(rtNodes)
 #       print(distanceToHash,'\n')
 
-        closestNodes = routingTable.getClosestNodesTo(randomH)
+        closestNodes = routingTable.get_closest_nodes_to(randomH)
 #       print(closestNodes)
 
         # check if the closest nodes are actually the closest ones in the rt
         distances_copy = distanceToHash.copy()
         for node in closestNodes:
             minDist = min(distances_copy)
-            minDistNode = rtNodes[getIndexOfValue(distanceToHash, minDist)]
+            minDistNode = rtNodes[get_index_of_value(distanceToHash, minDist)]
             self.assertEqual(node, minDistNode)
-            distances_copy = removeItemFromArray(distances_copy, getIndexOfValue(distances_copy,minDist))
+            distances_copy = remove_item_from_array(distances_copy, get_index_of_value(distances_copy,minDist))
 
 
-def getIndexOfValue(array, value):
+def get_index_of_value(array, value):
     return array.index(value)
 
-def removeItemFromArray(array, item):
+def remove_item_from_array(array, item):
     del array[item]
     return array 
 
