@@ -4,6 +4,6 @@
 # all the test files that serve as local pre-tests
 dht/miscelaneous.py
 
-
-
+# ignore the venv
+venv/
 
