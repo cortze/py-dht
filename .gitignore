@@ -7,3 +7,5 @@ dht/miscelaneous.py
 # ignore the venv
 venv/
 
+# ignore pycharm folders
+.idea/
