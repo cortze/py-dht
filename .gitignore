@@ -9,3 +9,6 @@ venv/
 
 # ignore pycharm folders
 .idea/
+
+# csvs for the benchmarks
+csvs
