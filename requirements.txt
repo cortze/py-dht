@@ -67,7 +67,6 @@ prompt-toolkit==3.0.39
 psutil==5.9.5
 ptyprocess==0.7.0
 pure-eval==0.2.2
--e git+ssh://git@github.com/cortze/py-dht.git@83b46d854d57da5e4b2cf61bfa144e9d74bad863#egg=py_dht
 pycparser==2.21
 Pygments==2.15.1
 python-dateutil==2.8.2
