@@ -1,3 +1,4 @@
+import random
 import time
 from dht.key_store import KeyValueStore
 from dht.routing_table import RoutingTable
@@ -5,19 +6,20 @@ from dht.hashes import Hash
 
 """ DHT Client """
 
-class DHTClient():
+
+class DHTClient:
 
     """ This class represents the client that participates and interacts with the simulated DHT"""
 
     def __repr__(self) -> str:
         return "DHT-cli-"+self.ID
 
-    def __init__(self, id, network, kbucketSize:int = 20, a: int = 1, b: int = 20, stuckMaxCnt = 3):
+    def __init__(self, nodeid, network, kbucketSize:int = 20, a: int = 1, b: int = 20, stuckMaxCnt: int = 3):
         """ client builder -> init all the internals & compose the routing table"""
         # TODO: on the options given for the DHTClient, we could consider:
         # - latency distribution (how much time to wait before giving back any reply)
         # - Kbucket size
-        self.ID = id
+        self.ID = nodeid
         self.network = network
         self.k = kbucketSize
         self.rt = RoutingTable(self.ID, kbucketSize)
@@ -214,14 +216,15 @@ class Connection():
     def retrieve_segment(self, key: Hash):
         return self.to.retrieve_segment(key)
 
-class DHTNetwork():
+
+class DHTNetwork:
     """ serves a the shared point between all the nodes participating in the simulation,
     allows node to communicat with eachother without needing to implement an API or similar"""
 
     def __init__(self, networkID: int, errorRate: int):
         """ class initializer, it allows to define the networkID and the delays between nodes """
         self.networkID = networkID
-        self.errorRate = errorRate
+        self.errorRate = errorRate / 100.0 # get the error rate in a float [0, 1] to be comparable with random.random
         self.nodeStore = NodeStore()
         self.errorTracker = [] # every time that an error is tracked, add it to the queue
         self.connectionTracker = [] # every time that a connection was stablished
@@ -231,34 +234,37 @@ class DHTNetwork():
         """ add a new node to the DHT network """
         self.nodeStore.add_node(newNode)
 
-    def connect_to_node(self, originNode: int, targetNode: int) -> Connection:
+    def connect_to_node(self, originNode: int, targetNode: int):
         """ get the given DHT client from the PeerStore or raise an error """
         # increase always the total connection counter
         self.connectionCnt += 1
-        # TODO: apply `errorRate` chances of not connecting a node 
         try:
+            # check the error rate (avoid stablishing the connection if there is an error)
+            errorGuess = random.random()
+            if errorGuess < self.errorRate:
+                raise ConnectionError(targetNode, "simulated error", time.time())
             node = self.nodeStore.get_node(targetNode)
             self.connectionTracker.append({
                 'time': time.time(),
                 'from': originNode,
-                'to': targetNode,}) 
+                'to': targetNode,})
             return Connection(self.connectionCnt, originNode, node)
 
         # TODO: at the moment, I only have a peer-missing error, update it to a connection error-rate (usual in Libp2p)
         except NodeNotInStoreError as e:
-            connError = ConnectionError(e.missingNode, e.description, e.time)
+            connerror = ConnectionError(e.missingNode, e.description, e.time)
             self.errorTracker.append({
-                'time': connError.errorTime, 
-                'error': connError.description})
-            raise connError
+                'time': connerror.errorTime,
+                'error': connerror.description})
+            raise connerror
 
-    def bootstrap_node(self, nodeID: int, bucketSize:int, accuracy: int = 100):
+    def bootstrap_node(self, nodeid: int, bucketsize: int): # ( accuracy: int = 100 )
         """ checks among all the existing nodes in the network, which are the correct ones to 
         fill up the routing table of the given node """
         # best way to know which nodes are the best nodes for a routing table, is to compose a rt itself 
         # Accuracy = How many closest peers / K closest peers do we know (https://github.com/plprobelab/network-measurements/blob/master/results/rfm19-dht-routing-table-health.md) 
         # TODO: generate a logic that selects the routing table with the given accuracy
-        rt = RoutingTable(nodeID, bucketSize) 
+        rt = RoutingTable(nodeid, bucketsize)
         for node in self.nodeStore.get_nodes():
             rt.new_discovered_peer(node)
         return rt.get_routing_nodes()
