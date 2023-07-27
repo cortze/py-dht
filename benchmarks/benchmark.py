@@ -28,7 +28,7 @@ class Benchmark:
         for i in range(self.number_of_times):
             round_result = Result(i)
             duration = time.time()
-            try: 
+            try:
                 duration = self.task_to_measure()
 
             except Exception as e:
