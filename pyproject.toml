@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools", "setuptools_scm[toml]"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "py-dht"
+description = "Small dht implementation ideal for DHT simulations"
+license = {file = "LICENSE"}
+maintainers = [
+    {name = "@cortze | Mikel Cortes ", email = "cortze@protonmail.com"},
+]
+requires-python = ">=3.10"
+dependencies = [ "pandas", "jupyter" ]
+
+dynamic = [
+    "version",
+]
+
+[tool.setuptools_scm]
+
+[project.urls]
+Repository = "https://github.com/cortze/py-dht"
+
+[tool.setuptools.packages.find]
+include = [
+  "dht*",
+]
