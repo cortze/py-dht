@@ -11,4 +11,4 @@ venv/
 .idea/
 
 # csvs for the benchmarks
-csvs
+benchmarks/csvs
