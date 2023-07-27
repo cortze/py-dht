@@ -4,8 +4,12 @@ import pandas as pd
 
 class NonSucceedBenchmark(Exception):
     """ Benchmark errors """
-    def __init__(self):
-        pass
+    def __init__(self, e):
+        self.exception = e
+
+    def info(self):
+        return self.exception
+
 
 
 class Benchmark:
@@ -23,14 +27,14 @@ class Benchmark:
         b_start_time = time.time()
         for i in range(self.number_of_times):
             round_result = Result(i)
-            duration = 0.0
+            duration = time.time()
             try: 
                 duration = self.task_to_measure()
 
             except Exception as e:
                 duration = time.time() 
                 round_result.failed()
-                # print(f"error running benchmark {self.name} ({self.tag}) - {e}")
+                print(f"error running benchmark {self.name} ({self.tag}) - {e}")
 
             round_result.finished(duration)
             # print(f"round {round_result.round} finished in {round_result.duration_s}s")
@@ -85,7 +89,7 @@ def display_benchmark_metrics(name, df):
     """ display the summary of a given benchmark-results """
     print(f'-- benchmark: {name} --')
     print(f"rounds          : {len(df)}")
-#    print(f'failed rounds   : {df.failed.count()}')
+    print(f'failed rounds   : {df.failed.sum()}')
     print(f'prep time (s)   : {df.task_prep_time.mean()}')
     print(f"avg (s)         : {df.duration_s.mean()}")
     print(f"median (s)      : {df.duration_s.median()}")
