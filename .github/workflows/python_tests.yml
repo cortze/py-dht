@@ -1,5 +1,5 @@
 # taking as reference: https://github.com/actions/starter-workflows/blob/main/ci/python-package.yml 
-name: Python package
+name: DHT Unitary Test
 
 on:
   push:
