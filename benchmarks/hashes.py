@@ -39,7 +39,7 @@ def main(args):
 
 def hash_creation_benchmark(tag_base: str, i: int):
     """ benchmark the time to compose a Hash value with the given implementation """
-    b_name = tag_base + f'_hash_creation_{i}_iters'
+    b_name = tag_base + f'_hash_creation'
 
     def task() -> float:
         # initialization
@@ -59,7 +59,7 @@ def hash_creation_benchmark(tag_base: str, i: int):
 
 def hash_distance_benchmark(tag_base: str, i: int):
     """ benchmarks the time it takes to get the distance between 2 Hashes """
-    b_name = tag_base + f'_distance_between_hashes_{i}_iters'
+    b_name = tag_base + f'_distance_between_hashes'
 
     def task() -> float:
         # initialization
@@ -83,7 +83,7 @@ def hash_distance_benchmark(tag_base: str, i: int):
 
 def hash_shared_bits(tag_base: str, i: int):
     """ benchmarks the time it takes to compare the shared upper bits between 2 Hashes """
-    b_name = tag_base + f'_shared_bits_between_hashes_{i}_iters'
+    b_name = tag_base + f'_shared_bits_between_hashes'
     def task() -> float:
         # initialization
         random_id_1 = random.sample(range(20000), 1)
@@ -105,7 +105,7 @@ def hash_shared_bits(tag_base: str, i: int):
 
 def hash_shared_bits(tag_base: str, i: int):
     """ benchmarks the time it takes to compare the shared upper bits between 2 Hashes """
-    b_name = tag_base + f'_shared_bits_between_hashes_{i}_iters'
+    b_name = tag_base + f'_shared_bits_between_hashes'
     def task() -> float:
         # initialization
         random_id_1 = random.sample(range(20000), 1)
