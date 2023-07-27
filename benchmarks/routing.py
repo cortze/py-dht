@@ -28,17 +28,17 @@ def main(args):
     # 1- hash creation task
     name, result_df = routing_new_discover_node(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 2- get closest nodes to hash
     name, result_df = routing_closest_to_hash(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 3- get the routing table
     name, result_df = routing_get_rt(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     exit(0)
 

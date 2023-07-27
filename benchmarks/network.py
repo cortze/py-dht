@@ -7,7 +7,7 @@ from benchmark import Benchmark, NonSucceedBenchmark, display_benchmark_metrics
 
 def main(args):
     # check the args
-    tag_base = args.t + "_routing"
+    tag_base = args.t + "_network"
     out_folder = args.o
     iterations = int(args.i)
     k = int(args.k)
@@ -26,38 +26,39 @@ def main(args):
     # 1- network initialization
     name, result_df = dht_network_initialization(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 2-
-    name, result_df = dht_network_node_bootstrap(tag_base, iterations, k, network_size)
+    name, result_df = dht_network_bootstrap_node(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 3-
     name, result_df = dht_network_bootstrap(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     exit(0)
 
 
 def gen_network(k: int, network_size: int):
-    node_ids = random.sample(range(1, 4*network_size), network_size)
+    node_ids = random.sample(range(network_size), network_size)
     network = DHTNetwork(networkID=0, errorRate=0)
     for node in node_ids:
+        node = DHTClient(node, network, k, a=3, b=k, stuckMaxCnt=5)
         network.add_new_node(node)
     return network, node_ids
 
 
 def get_dht_cli(network):
     random_id = random.sample(range(network.len()), 1)[0]
-    dht_cli = network.network.nodeStore.get_node(random_id)
+    dht_cli = network.nodeStore.get_node(random_id)
     return dht_cli
 
 
 def dht_network_initialization(tag_base: str, i: int, k: int, network_size: int):
     """ benchmarks the time it takes to find the closest nodes to a key in the rt """
-    b_name = tag_base + f'_network_initialization'
+    b_name = tag_base + f'_n_initialization'
 
     def task() -> float:
         # measurement
@@ -66,7 +67,7 @@ def dht_network_initialization(tag_base: str, i: int, k: int, network_size: int)
         return time.time() - start
 
     b = Benchmark(
-        name='network_initialization',
+        name='n_initialization',
         tag=tag_base,
         task_to_measure=task,
         number_of_times=i)
@@ -74,9 +75,9 @@ def dht_network_initialization(tag_base: str, i: int, k: int, network_size: int)
     return b_name, df
 
 
-def dht_network_node_bootstrap(tag_base: str, i: int, k: int, network_size: int):
+def dht_network_bootstrap_node(tag_base: str, i: int, k: int, network_size: int):
     """ benchmarks the time it takes to find the closest nodes to a key in the rt """
-    b_name = tag_base + f'_network_node_bootstrap'
+    b_name = tag_base + f'_bootstrap_node'
 
     def task() -> float:
         # init
@@ -89,7 +90,7 @@ def dht_network_node_bootstrap(tag_base: str, i: int, k: int, network_size: int)
         return time.time() - start
 
     b = Benchmark(
-        name='node_bootstrap',
+        name='bootstrap_node',
         tag=tag_base,
         task_to_measure=task,
         number_of_times=i)
@@ -98,7 +99,7 @@ def dht_network_node_bootstrap(tag_base: str, i: int, k: int, network_size: int)
 
 def dht_network_bootstrap(tag_base: str, i: int, k: int, network_size: int):
     """ benchmarks the time it takes to find the closest nodes to a key in the rt """
-    b_name = tag_base + f'_network_node_bootstrap'
+    b_name = tag_base + f'_bootstrap_network'
 
     def task() -> float:
         # init
@@ -111,7 +112,7 @@ def dht_network_bootstrap(tag_base: str, i: int, k: int, network_size: int):
         return time.time() - start
 
     b = Benchmark(
-        name='node_bootstrap',
+        name='bootstrap_network',
         tag=tag_base,
         task_to_measure=task,
         number_of_times=i)

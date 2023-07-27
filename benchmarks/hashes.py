@@ -24,17 +24,17 @@ def main(args):
     # 1- hash creation task
     name, result_df = hash_creation_benchmark(tag_base, iterations)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name)
+    result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 2- calculate distances between hashes
     name, result_df = hash_distance_benchmark(tag_base, iterations)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder + '/' + name)
+    result_df.to_csv(out_folder + '/' + name+'.csv')
 
     # 3- calculate time of comparing shared bits
     name, result_df = hash_shared_bits(tag_base, iterations)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder + '/' + name)
+    result_df.to_csv(out_folder + '/' + name+'.csv')
 
 
 def hash_creation_benchmark(tag_base: str, i: int):
@@ -128,9 +128,11 @@ def hash_shared_bits(tag_base: str, i: int):
 if __name__ == "__main__":
     """ run the benchmarks under the given tag and parameters """
     args = argparse.ArgumentParser()
-    args.add_argument('-t')
-    args.add_argument('-o')
-    args.add_argument('-i')
+    args.add_argument('-t')  # test tag
+    args.add_argument('-o')  # output folder
+    args.add_argument('-i')  # number of iterations (for statistical robustness)
+    args.add_argument('-k')  # bucket size
+    args.add_argument('-n')  # network size (to compose the rt)
     a = args.parse_args()
     main(a)
 
