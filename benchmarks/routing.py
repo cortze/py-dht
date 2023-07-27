@@ -2,8 +2,10 @@ import argparse
 import time
 import os
 import random
+from dht.hashes import Hash
 from dht.routing_table import RoutingTable
 from benchmark import Benchmark, NonSucceedBenchmark, display_benchmark_metrics
+
 
 def main(args):
     # check the args
@@ -43,7 +45,7 @@ def main(args):
 
 def gen_rt(k: int, network_size: int):
     control = random.sample(range(network_size), 1)[0]
-    node_ids = random.sample(range(control, control+network_size), network_size)
+    node_ids = range(network_size)
     rt = RoutingTable(control, k)
     for node in node_ids:
         rt.new_discovered_peer(node)
@@ -74,20 +76,21 @@ def routing_new_discover_node(tag_base: str, i: int, k: int, network_size: int):
 
 def routing_closest_to_hash(tag_base: str, i: int, k: int, network_size: int):
     """ benchmarks the time it takes to return the rt """
-    b_name = tag_base + f'_retrieve_rt'
+    b_name = tag_base + f'_closest_to_hash'
 
     def task() -> float:
         # initialization
         rt = gen_rt(k, network_size)
         looking_for = random.sample(range(4 * network_size), 1)[0]
+        lookingH = Hash(looking_for)
 
         # measurement
         start = time.time()
-        rt.get_closest_nodes_to(looking_for)
+        rt.get_closest_nodes_to(lookingH)
         return time.time() - start
 
     b = Benchmark(
-        name='retrieve_rt',
+        name='closest_to_hash',
         tag=tag_base,
         task_to_measure=task,
         number_of_times=i)
