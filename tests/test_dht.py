@@ -23,7 +23,7 @@ class TestNetwork(unittest.TestCase):
         # check if we could have the correct rt for any specific nodeIDs
         for nodeID in range(k):
             # the test should actually fail if a Exception is raised
-            to = random.sample(range(size-1), 1)
+            to = random.sample(range(size), 1)
             _, _ = network.connect_to_node(nodeID, to[0])
             
         # force the failure of the connections attempting to connect a peer that doesn't exist
@@ -186,7 +186,7 @@ class TestNetwork(unittest.TestCase):
 
 def generateNetwork(k, size, id, errorRate, delayRate):
     network = DHTNetwork(id, errorRate, delayRate)
-    nodeIDs = range(1, size+1, 1)
+    nodeIDs = range(0, size, 1)
     nodes = []
     for i in nodeIDs:
         n = DHTClient(nodeid=i, network=network, kbucketSize=k, a=1, b=k, stuckMaxCnt=3)
