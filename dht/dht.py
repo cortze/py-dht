@@ -224,7 +224,7 @@ class DHTNetwork:
     def __init__(self, networkID: int, errorRate: int):
         """ class initializer, it allows to define the networkID and the delays between nodes """
         self.networkID = networkID
-        self.errorRate = errorRate / 100.0 # get the error rate in a float [0, 1] to be comparable with random.random
+        self.errorRate = errorRate
         self.nodeStore = NodeStore()
         self.errorTracker = [] # every time that an error is tracked, add it to the queue
         self.connectionTracker = [] # every time that a connection was stablished
@@ -240,8 +240,7 @@ class DHTNetwork:
         self.connectionCnt += 1
         try:
             # check the error rate (avoid stablishing the connection if there is an error)
-            errorGuess = random.random()
-            if errorGuess < self.errorRate:
+            if random.randint(0, 99) < self.errorRate:
                 raise ConnectionError(targetNode, "simulated error", time.time())
             node = self.nodeStore.get_node(targetNode)
             self.connectionTracker.append({
