@@ -123,7 +123,7 @@ def generateNetwork(k, size, id, errorRate):
     nodeIDs = range(1, size+1, 1)
     nodes = []
     for i in nodeIDs:
-        n = DHTClient(id=i, network=network, kbucketSize=k, a=2, b=k, stuckMaxCnt=5)
+        n = DHTClient(nodeid=i, network=network, kbucketSize=k, a=2, b=k, stuckMaxCnt=5)
         network.add_new_node(n)
         nodes.append(n)
     return network, nodes

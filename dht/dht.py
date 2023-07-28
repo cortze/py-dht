@@ -27,12 +27,12 @@ class DHTClient:
         # DHT parameters
         self.alpha = a # the concurrency parameter per path
         self.beta = b # the number of peers closest to a target that must have responded for a query path to terminate
-        self.lookupStuckMaxCnt = stuckMaxCnt # Number of maximum hops the client will do without reaching a closest peer 
+        self.lookupStuckMaxCnt = stuckMaxCnt # Number of maximum hops the client will do without reaching a closest peer
         # to finalize the lookup process
 
     def bootstrap(self) -> str:
         """ Initialize the RoutingTable from the given network and return the count of nodes per kbucket""" 
-        rtNodes = self.network.bootstrap_node(self.ID, self.k, accuracy=100)
+        rtNodes = self.network.bootstrap_node(self.ID, self.k)
         for node in rtNodes:
             self.rt.new_discovered_peer(node)
         # Return the summary of the RoutingTable
@@ -67,13 +67,13 @@ class DHTClient:
             return False
 
         def not_tracked(total, newones):
-            newNodes = {} 
+            newNodes = {}
             for node, dist in newones.items():
                 if node not in total:
                     newNodes[node] = dist
             return newNodes
         
-        while (stuckCnt < self.lookupStuckMaxCnt) and (len(nodesToTry) > 0) : 
+        while (stuckCnt < self.lookupStuckMaxCnt) and (len(nodesToTry) > 0) :
             # ask queued nodes to try
             for node in list(nodesToTry):
                 lookupSummary['connectionAttempts'] += 1
