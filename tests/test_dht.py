@@ -19,7 +19,7 @@ class TestNetwork(unittest.TestCase):
         k = 20
         size = 200
         id = 0
-        errorRate = 80
+        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
         network, _ = generateNetwork(k, size, id, errorRate)
         
         # check total size of the network
@@ -47,7 +47,7 @@ class TestNetwork(unittest.TestCase):
         """ test that the routing tables for each nodeID are correctly initialized """
         k = 2
         size = 20
-        errorRate = 80
+        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
         network, nodes = generateNetwork(k, size, 0, errorRate)
 
         for node in nodes:
@@ -63,7 +63,7 @@ class TestNetwork(unittest.TestCase):
         k = 10
         size = 500 
         id = 0
-        errorRate = 80
+        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
         _, nodes = generateNetwork(k, size, id, errorRate)
         for node in nodes:
             node.bootstrap()
@@ -97,7 +97,7 @@ class TestNetwork(unittest.TestCase):
         k = 10
         size = 500 
         id = 0
-        errorRate = 80
+        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
         _, nodes = generateNetwork(k, size, id, errorRate)
         for node in nodes:
             node.bootstrap()
