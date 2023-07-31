@@ -12,12 +12,12 @@ class TestNetwork(unittest.TestCase):
         k = 20
         size = 200
         id = 0
-        errorRate = 0  # apply an error rate of 0 (to check if the logic pases)
-        delayRange = None  # ms
-        network, _ = generateNetwork(k, size, id, errorRate, delayRange)
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        network, _ = generate_network(k, size, id, errorrate, delayrange)
         
         # check total size of the network
-        totalnodes = network.nodeStore.len()
+        totalnodes = network.nodestore.len()
         self.assertEqual(size, totalnodes)
 
         # check if we could have the correct rt for any specific nodeIDs
@@ -41,9 +41,9 @@ class TestNetwork(unittest.TestCase):
         """ test that the routing tables for each nodeID are correctly initialized """
         k = 2
         size = 20
-        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
-        delayRange = None  # ms
-        network, nodes = generateNetwork(k, size, 0, errorRate, delayRange)
+        errorrate = 0 # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        network, nodes = generate_network(k, size, 0, errorrate, delayrange)
 
         for node in nodes:
             summary = node.bootstrap()
@@ -58,34 +58,34 @@ class TestNetwork(unittest.TestCase):
         k = 10
         size = 500 
         id = 0
-        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
-        delayRange = None  # ms
-        _, nodes = generateNetwork(k, size, id, errorRate, delayRange)
+        errorrate = 0 # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        _, nodes = generate_network(k, size, id, errorrate, delayrange)
         for node in nodes:
             node.bootstrap()
    
-        randomSegment = "this is a simple segment of code"
-        segH = Hash(randomSegment)
+        randomsegment = "this is a simple segment of code"
+        segH = Hash(randomsegment)
         # use random node as lookup point
-        randomNodeID = random.sample(range(1, size), 1)[0]
-        rNode = nodes[randomNodeID]
-        self.assertNotEqual(rNode.network.len(), 0)
+        randomid = random.sample(range(1, size), 1)[0]
+        rnode = nodes[randomid]
+        self.assertNotEqual(rnode.network.len(), 0)
         
-        closestNodes, val, summary, _ = rNode.lookup_for_hash(key=segH)
-        self.assertEqual(val, "") # empty val, nothing stored yet
-        self.assertEqual(len(closestNodes), k)
+        closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH)
+        self.assertEqual(val, "")  # empty val, nothing stored yet
+        self.assertEqual(len(closestnodes), k)
         # print(f"lookup operation with {size} nodes done in {summary['finishTime'] - summary['startTime']}")
 
-        # validation of the lookup closestNodes vs the actual closestNodes in the network
-        validationClosestNodes = {}
+        # validation of the lookup closestnodes vs the actual closestnodes in the network
+        validationclosestnodes = {}
         for node in nodes:
             nodeH = Hash(node.ID)
             dist = nodeH.xor_to_hash(segH)
-            validationClosestNodes[node.ID] = dist
+            validationclosestnodes[node.ID] = dist
         
-        validationClosestNodes = dict(sorted(validationClosestNodes.items(), key=lambda item: item[1])[:k])
-        for i, node in enumerate(closestNodes):
-            self.assertEqual((node in validationClosestNodes), True)
+        validationclosestnodes = dict(sorted(validationclosestnodes.items(), key=lambda item: item[1])[:k])
+        for i, node in enumerate(closestnodes):
+            self.assertEqual((node in validationclosestnodes), True)
 
     def test_dht_error_rate_on_connection(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
@@ -93,8 +93,8 @@ class TestNetwork(unittest.TestCase):
         size = 2
         id = 0
         errorrate = 50   # apply an error rate of 0 (to check if the logic pases)
-        delayRange = None  # ms
-        network, nodes = generateNetwork(k, size, id, errorrate, delayRange)
+        delayrange = None  # ms
+        network, nodes = generate_network(k, size, id, errorrate, delayrange)
         for node in nodes:
             node.bootstrap()
 
@@ -119,77 +119,77 @@ class TestNetwork(unittest.TestCase):
         k = 10
         size = 500 
         id = 0
-        errorRate = 0 # apply an error rate of 0 (to check if the logic pases)
-        delayRange = None  # ms
-        _, nodes = generateNetwork(k, size, id, errorRate, delayRange)
+        errorrate = 0 # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        _, nodes = generate_network(k, size, id, errorrate, delayrange)
         for node in nodes:
             node.bootstrap()
    
-        randomSegment = "this is a simple segment of code"
-        segH = Hash(randomSegment)
+        rsegment = "this is a simple segment of code"
+        segH = Hash(rsegment)
         # use random node as lookup point
-        publisherNodeID = random.sample(range(1, size), 1)[0]
-        pNode = nodes[publisherNodeID]
-        self.assertNotEqual(pNode.network.len(), 0)
+        pnodeid = random.sample(range(1, size), 1)[0]
+        pnode = nodes[pnodeid]
+        self.assertNotEqual(pnode.network.len(), 0)
         
-        provideSummary, _ = pNode.provide_block_segment(randomSegment)
-        self.assertEqual(len(provideSummary["closestNodes"]), k)
+        psummary, _ = pnode.provide_block_segment(rsegment)
+        self.assertEqual(len(psummary["closestNodes"]), k)
         # print(f"provide operation with {size} nodes done in {provideSummary['finishTime'] - provideSummary['startTime']}")
         
-        interestedNodeID = random.sample(range(1, size), 1)[0]
-        iNode = nodes[interestedNodeID]
-        closestNodes, val, summary, _ = iNode.lookup_for_hash(key=segH)
-        self.assertEqual(randomSegment, val)
+        interestednodeid = random.sample(range(1, size), 1)[0]
+        inode = nodes[interestednodeid]
+        closestnodes, val, summary, _ = inode.lookup_for_hash(key=segH)
+        self.assertEqual(rsegment, val)
 
     def test_aggregated_delays(self):
         """ test if the interaction between the nodes in the network actually generate a compounded delay """
         k = 10
         size = 500
         id = 0
-        errorRate = 0  # apply an error rate of 0 (to check if the logic pases)
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         maxDelay = 101
         minDelay = 10
-        delayRange = range(minDelay, maxDelay, 10)  # ms
-        _, nodes = generateNetwork(k, size, id, errorRate, delayRange)
+        delayrange = range(minDelay, maxDelay, 10)  # ms
+        _, nodes = generate_network(k, size, id, errorrate, delayrange)
         for node in nodes:
             node.bootstrap()
 
         randomSegment = "this is a simple segment of code"
         segH = Hash(randomSegment)
         # use random node as lookup point
-        publisherNodeID = random.sample(range(1, size), 1)[0]
-        pNode = nodes[publisherNodeID]
-        self.assertNotEqual(pNode.network.len(), 0)
+        publishernodeid = random.sample(range(1, size), 1)[0]
+        pnode = nodes[publishernodeid]
+        self.assertNotEqual(pnode.network.len(), 0)
 
-        provideSummary, aggrdelay = pNode.provide_block_segment(randomSegment)
-        self.assertEqual(len(provideSummary["closestNodes"]), k)
+        providesummary, aggrdelay = pnode.provide_block_segment(randomSegment)
+        self.assertEqual(len(providesummary["closestNodes"]), k)
 
-        lookupPeers = provideSummary['contactedPeers']
-        providePeers = len(provideSummary['succesNodeIDs'])
-        totdelays = lookupPeers * 2 + providePeers + 2
-        bestDelay = totdelays * minDelay
-        worstDelay = totdelays * maxDelay
-        self.assertGreater(aggrdelay, bestDelay)
-        self.assertLess(aggrdelay, worstDelay)
+        lookuppeers = providesummary['contactedPeers']
+        providepeers = len(providesummary['succesNodeIDs'])
+        totdelays = lookuppeers * 2 + providepeers + 2
+        bestdelay = totdelays * minDelay
+        worstdelay = totdelays * maxDelay
+        self.assertGreater(aggrdelay, bestdelay)
+        self.assertLess(aggrdelay, worstdelay)
 
-        interestedNodeID = random.sample(range(1, size), 1)[0]
-        iNode = nodes[interestedNodeID]
-        closestNodes, val, summary, aggrdelay = iNode.lookup_for_hash(key=segH)
+        interestednodeid = random.sample(range(1, size), 1)[0]
+        inode = nodes[interestednodeid]
+        closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH)
         self.assertEqual(randomSegment, val)
 
-        lookupPeers = summary['successfulCons']
-        totdelays = lookupPeers * 2
-        bestDelay = totdelays * minDelay
-        worstDelay = totdelays * maxDelay
-        self.assertGreater(aggrdelay, bestDelay)
-        self.assertLess(aggrdelay, worstDelay)
+        lookuppeers = summary['successfulCons']
+        totdelays = lookuppeers * 2
+        bestdelay = totdelays * minDelay
+        worstdelay = totdelays * maxDelay
+        self.assertGreater(aggrdelay, bestdelay)
+        self.assertLess(aggrdelay, worstdelay)
 
-def generateNetwork(k, size, id, errorRate, delayRate):
-    network = DHTNetwork(id, errorRate, delayRate)
-    nodeIDs = range(0, size, 1)
+def generate_network(k, size, id, errorrate, delayrate):
+    network = DHTNetwork(id, errorrate, delayrate)
+    nodeids = range(0, size, 1)
     nodes = []
-    for i in nodeIDs:
-        n = DHTClient(nodeid=i, network=network, kbucketSize=k, a=1, b=k, stuckMaxCnt=3)
+    for i in nodeids:
+        n = DHTClient(nodeid=i, network=network, kbucketsize=k, a=1, b=k, steptostop=3)
         network.add_new_node(n)
         nodes.append(n)
     return network, nodes
