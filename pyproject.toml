@@ -10,7 +10,7 @@ maintainers = [
     {name = "@cortze | Mikel Cortes ", email = "cortze@protonmail.com"},
 ]
 requires-python = ">=3.10"
-dependencies = [ "pandas", "jupyter" ]
+dependencies = [ "bitarray" ]
 
 dynamic = [
     "version",
