@@ -43,16 +43,16 @@ def main(args):
 
 def gen_network(k: int, network_size: int):
     node_ids = random.sample(range(network_size), network_size)
-    network = DHTNetwork(networkID=0, errorRate=0)
+    network = DHTNetwork(networkid=0, errorrate=0, delayrange=None)
     for node in node_ids:
-        node = DHTClient(node, network, k, a=3, b=k, stuckMaxCnt=5)
+        node = DHTClient(node, network, k, a=3, b=k, steptostop=5)
         network.add_new_node(node)
     return network, node_ids
 
 
 def get_dht_cli(network):
     random_id = random.sample(range(network.len()), 1)[0]
-    dht_cli = network.nodeStore.get_node(random_id)
+    dht_cli = network.nodestore.get_node(random_id)
     return dht_cli
 
 
@@ -86,7 +86,7 @@ def dht_network_bootstrap_node(tag_base: str, i: int, k: int, network_size: int)
 
         # measurement
         start = time.time()
-        _ = n.bootstrap_node(p.ID, k, 100)
+        _ = n.bootstrap_node(p.ID, k)
         return time.time() - start
 
     b = Benchmark(
@@ -108,7 +108,7 @@ def dht_network_bootstrap(tag_base: str, i: int, k: int, network_size: int):
         # measurement
         start = time.time()
         for id in ids:
-            _ = n.bootstrap_node(id, k, 100)
+            _ = n.bootstrap_node(id, k)
         return time.time() - start
 
     b = Benchmark(
