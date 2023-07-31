@@ -100,7 +100,6 @@ class KBucket:
 
     def get_x_nodes_close_to(self, key: Hash, nnodes: int):
         """ return the XX number of nodes close to a key from this bucket """
-        print(f"checking in bucket {nnodes} nodes")
         distances = self.get_distances_to_key(key)
         # Get only the necessary and closest nodes to the key from the kbucket
         for i, _ in list(distances.keys())[nnodes:]:  # rely on std array, as the size is small and it can be sliced :)
