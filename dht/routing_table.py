@@ -42,7 +42,7 @@ class RoutingTable:
         # get the closest nodes to the peer
         rtnodes = deque()
         for b in self.kbuckets:
-            for n in b.bucketNodes:
+            for n in b.bucketnodes:
                 rtnodes.append(n)
         return rtnodes
 
