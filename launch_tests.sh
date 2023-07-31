@@ -14,6 +14,6 @@ fi
 
 for t in "${TESTS[@]}"
 do
-  echo "launching benchmark $t"
+  echo "launching test $t"
   python -m unittest $t
 done

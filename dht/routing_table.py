@@ -49,7 +49,7 @@ class RoutingTable:
     def __repr__(self) -> str:
         s = "" 
         for i, b in enumerate(self.kbuckets):
-            s += f"b{i}:{b.len()} "
+            s += f"b{i}:{len(b)} "
         return s
    
     def summary(self) -> str:
@@ -64,53 +64,44 @@ class KBucket:
         """ initialize the kbucket with setting a max size along some other control variables """
         self.localnodeid = localnodeid
         self.localnodehash = Hash(localnodeid)
-        self.bucketnodes = defaultdict()
+        self.bucketnodes = deque(maxlen=size)
         self.bucketsize = size
         self.lastupdated = 0
 
     def add_peer_to_bucket(self, nodeid: int):
         """ check if the new node is elegible to replace a further one """
-        # Check if the distance between our NodeID and the remote one
         nodehash = Hash(nodeid)
         dist = self.localnodehash.xor_to_hash(nodehash)
-        if (self.len() > 0) and (self.len() >= self.bucketsize):
-            if max(self.bucketnodes.values()) < dist:
+        bucketdistances = self.get_distances_to_key(self.localnodehash)
+        if len(self) >= self.bucketsize:
+            maxval = max(bucketdistances)
+            if maxval < dist:
                 pass
             else:
-                # As the dist of the new node is smaller, add it to the list
-                self.bucketnodes[nodeid] = dist
-                # Sort back the nodes with the new one and remove the last remaining item
-                bucketdistances = OrderedDict(sorted(self.bucketnodes.items(), key=lambda item: item[1]))
-                bucketdistances.pop(deque(bucketdistances)[-1])
-        else: 
-            self.bucketnodes[nodeid] = dist
+                maxvalid = bucketdistances.index(maxval)
+                del self.bucketnodes[maxvalid]
+                self.bucketnodes.append(nodeid)
+        else:
+            self.bucketnodes.append(nodeid)
         return self
-   
+
     def get_distances_to_key(self, key: Hash):
         """ return the distances from all the nodes in the bucket to a given key """
-        distances = defaultdict()
+        distances = deque()
         for nodeid in self.bucketnodes:
             nodehash = Hash(nodeid)
             dist = nodehash.xor_to_hash(key)
-            distances[nodeid] = dist
-        return OrderedDict(sorted(distances.items(), key=lambda item: item[1]))
-
-    def get_x_nodes_close_to(self, key: Hash, nnodes: int):
-        """ return the XX number of nodes close to a key from this bucket """
-        distances = self.get_distances_to_key(key)
-        # Get only the necessary and closest nodes to the key from the kbucket
-        for i, _ in list(distances.keys())[nnodes:]:  # rely on std array, as the size is small and it can be sliced :)
-            distances.pop(i)
+            distances.append(dist)
         return distances
-   
-    def len(self) -> int:
-        return len(self.bucketnodes)
+
+    def get_bucket_nodes(self):
+        return self.bucketnodes.copy()
 
     def __len__(self) -> int:
         return len(self.bucketnodes)
 
     def __repr__(self) -> str:
-        return f"{self.len()} nodes"
+        return f"{len(self)} nodes"
 
 
 

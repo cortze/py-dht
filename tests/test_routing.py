@@ -4,41 +4,40 @@ from dht.hashes import Hash
 
 class TestDHTHashes(unittest.TestCase):
     def test_kbucket(self):
-        bucketsize = 2
+        bucketsize = 4
         localid = 1
         localhash = Hash(localid)
-        remoteids = [2, 3, 4]
-        
+        remoteids = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
         kbucket = KBucket(localid, bucketsize)
         ogs = []
         for id in remoteids:
             h = Hash(id)
             ogs.append(localhash.xor_to_hash(h))
             kbucket.add_peer_to_bucket(id)
-        
+
         # Firts, check the bucket didn't go beyond the size
         self.assertEqual(len(kbucket), bucketsize)
-
-        distances = ogs.copy()
+        zippedogs = zip(remoteids, ogs)
+        zippedogs = sorted(zippedogs, key = lambda pair: pair[1])
         # Second, ensure that the bucket has in fact the closest nodeIDs to the local ID
-        closeNodesInBucket = kbucket.get_x_nodes_close_to(localhash, bucketsize)
-        for node in closeNodesInBucket:
-            minDist = min(distances)
-            minIdx = get_index_of_value(ogs, minDist)
-            self.assertEqual(node, remoteids[minIdx])
-            distances = remove_item_from_array(distances, get_index_of_value(distances, minDist))
+        distances = kbucket.get_distances_to_key(localhash)
+        ids = kbucket.get_bucket_nodes()
+        zipped_b = sorted(zip(ids, distances), key = lambda pair: pair[1])
+        for idx, pair in enumerate(zipped_b):
+            self.assertEqual(zippedogs[idx], pair)
 
     def test_routing_table(self):
-        totalnodes = 40
+        totalnodes = 700
         bucketsize = 5
         localid = 1
         localhash = Hash(localid)
-        remoteids = range(localid+1, localid+1+totalnodes, 1)
+        remoteids = range(localid+1, 1+totalnodes, 1)
 
         rt = RoutingTable(localid, bucketsize)
 
         bucketcontrol = {}
-        sbits = {}
+        sharedbits = {}
         distances = []
         for id in remoteids:
             idH = Hash(id)
@@ -47,25 +46,19 @@ class TestDHTHashes(unittest.TestCase):
             if sBits not in bucketcontrol.keys():
                 bucketcontrol[sBits] = 0
             bucketcontrol[sBits] += 1
-            sbits[id] = sBits
+            sharedbits[id] = sBits
             rt.new_discovered_peer(id)
             distances.append(dist) 
-      
-#       print("summary of the rt:")
-#       print(routingTable)
-#       print(bucketControl)
-#       print(sharedBits)
-#       print(distances,'\n')
 
         # check that there is no missing bucket, and that max item per buckets is maintained
         for i, b in enumerate(rt.kbuckets):
             if i in bucketcontrol:
                 if bucketcontrol[i] > bucketsize:
-                    self.assertEqual(b.len(), bucketsize)
+                    self.assertEqual(len(b), bucketsize)
                 else:
-                    self.assertEqual(b.len(), bucketcontrol[i])
+                    self.assertEqual(len(b), bucketcontrol[i])
             else:
-                self.assertEqual(b.len(), 0)
+                self.assertEqual(len(b), 0)
 
         randomid = totalnodes + 100
         randomhash = Hash(randomid)
@@ -82,14 +75,7 @@ class TestDHTHashes(unittest.TestCase):
                 distancetohash.append(nodehash.xor_to_hash(randomhash))
                 rtnodes.append(node)
 
-#       print("summary of the lookup:")
-#       print(localH.sharedUpperBits(randomH))
-#       print(sharedBits)
-#       print(rtNodes)
-#       print(distanceToHash,'\n')
-
         closestnodes = rt.get_closest_nodes_to(randomhash)
-#       print(closestNodes)
 
         # check if the closest nodes are actually the closest ones in the rt
         distances_copy = distancetohash.copy()
