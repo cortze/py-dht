@@ -63,30 +63,27 @@ class KBucket:
     def __init__(self, localnodeid: int, size: int):
         """ initialize the kbucket with setting a max size along some other control variables """
         self.localnodeid = localnodeid
-        self.bucketnodes = deque(maxlen=size)
+        self.localnodehash = Hash(localnodeid)
+        self.bucketnodes = defaultdict()
         self.bucketsize = size
         self.lastupdated = 0
 
     def add_peer_to_bucket(self, nodeid: int):
         """ check if the new node is elegible to replace a further one """
         # Check if the distance between our NodeID and the remote one
-        localnodehash = Hash(self.localnodeid)
         nodehash = Hash(nodeid)
-        dist = localnodehash.xor_to_hash(nodehash)
-        bucketdistances = self.get_distances_to_key(localnodehash)
+        dist = self.localnodehash.xor_to_hash(nodehash)
         if (self.len() > 0) and (self.len() >= self.bucketsize):
-            if bucketdistances[deque(bucketdistances)[-1]] < dist:
+            if max(self.bucketnodes.values()) < dist:
                 pass
             else:
                 # As the dist of the new node is smaller, add it to the list
-                bucketdistances[nodeid] = dist
+                self.bucketnodes[nodeid] = dist
                 # Sort back the nodes with the new one and remove the last remaining item
-                bucketdistances = OrderedDict(sorted(bucketdistances.items(), key=lambda item: item[1]))
+                bucketdistances = OrderedDict(sorted(self.bucketnodes.items(), key=lambda item: item[1]))
                 bucketdistances.pop(deque(bucketdistances)[-1])
-                # Update the new closest nodes in the bucket
-                self.bucketnodes = deque(bucketdistances.keys(), maxlen=len(bucketdistances))
         else: 
-            self.bucketnodes.append(nodeid)
+            self.bucketnodes[nodeid] = dist
         return self
    
     def get_distances_to_key(self, key: Hash):

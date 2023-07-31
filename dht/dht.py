@@ -18,6 +18,7 @@ class DHTClient:
     def __init__(self, nodeid: int, network, kbucketsize: int = 20, a: int = 1, b: int = 20, steptostop: int = 3):
         """ client builder -> init all the internals & compose the routing table"""
         self.ID = nodeid
+        self.hash = Hash(id)
         self.network = network
         self.k = kbucketsize
         self.rt = RoutingTable(self.ID, kbucketsize)
@@ -243,7 +244,36 @@ class DHTNetwork:
         self.errortracker = deque()  # every time that an error is tracked, add it to the queue
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
-    
+
+    def optimal_rt_for_cli(network, dhtcli, cliids, clihashes):
+        """ optimized operation for finding the most optimal nodes for a given id's rt """
+        sharedbits = defaultdict()
+        distances = defaultdict()
+        for i, cli in cliids:
+            sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
+            dist = dhtcli.hash.xor_to_hash(clihashes[i])
+            sharedbits[cli] = sbits
+            distances[cli] = dist
+
+
+    def init_with_random_peers(self, threads: int, idrange, bsize: int, a: int, b: int, stepstop: int):
+        """ optimized way of initializing a network, reducing timings """
+        clihashes = deque(maxlen=len(idrange))
+        # init the network, but already keep the has if the id in memory (avoid having to do extra hashing)
+        for iditem in idrange:
+            dhtcli = DHTClient(iditem, self, bsize, a, b, stepstop)
+            clihash = Hash(iditem)
+            clihashes.append(clihash)
+            self.add_new_node(dhtcli)
+
+
+
+        for dhtcli in self.nodestore.nodes:
+            pass
+
+
+
+
     def add_new_node(self, newnode: DHTClient):
         """ add a new node to the DHT network """
         self.nodestore.add_node(newnode)
