@@ -1,5 +1,5 @@
 import random
-from types import ClassMethodDescriptorType
+from collections import deque
 import unittest
 from dht.routing_table import RoutingTable
 from dht.dht import DHTClient, ConnectionError, DHTNetwork
@@ -52,6 +52,27 @@ class TestNetwork(unittest.TestCase):
                 rt_aux.new_discovered_peer(otherNode.ID)
             # compare the rt from the network with the one from the real RoutingTable
             self.assertEqual(summary, rt_aux.summary())
+
+    def test_optimized_network_initialization(self):
+        """ test that the routing tables for each nodeID are correctly initialized """
+        k = 4
+        a = 1
+        b = k
+        step4stop = 3
+        size = 60
+        idrange = range(1, size)
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+
+        network = DHTNetwork(0, errorrate, delayrange)
+        _ = network.init_with_random_peers(0, idrange, k, a, b, step4stop)
+
+        for nodeid in idrange:
+            node = DHTClient(nodeid, network, k, a, b, step4stop)
+            c_summary = node.bootstrap()
+            print(c_summary)
+            print(network.nodestore.nodes[nodeid].rt.summary())
+            self.assertEqual(node.rt, network.nodestore.nodes[nodeid].rt)
 
     def test_dht_interop(self): 
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """ 

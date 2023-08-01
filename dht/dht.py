@@ -245,19 +245,27 @@ class DHTNetwork:
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
 
-    def optimal_rt_for_cli(network, dhtcli, cliids, clihashes):
+    def optimal_rt_for_cli(network, dhtcli, cliids, clihashes, bucketsize):
         """ optimized operation for finding the most optimal nodes for a given id's rt """
-        sharedbits = defaultdict()
-        distances = defaultdict()
-        for i, cli in cliids:
+        distpersbits = deque()  # distances that would fall into each bucket
+        nodeperdistance = defaultdict()  # key= distance val=nodeid
+        for i, cli in enumerate(cliids):
             sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
             dist = dhtcli.hash.xor_to_hash(clihashes[i])
-            sharedbits[cli] = sbits
-            distances[cli] = dist
+            while len(distpersbits) <= sbits:
+                distpersbits.append(deque())
+            distpersbits[sbits].append(dist)
+            nodeperdistance[dist] = cli
+
+        for b in distpersbits:
+            distances = sorted(b)[:bucketsize]
+            for dist in distances:
+                dhtcli.rt.new_discovered_peer(nodeperdistance[dist])
+        return dhtcli
 
 
     def init_with_random_peers(self, threads: int, idrange, bsize: int, a: int, b: int, stepstop: int):
-        """ optimized way of initializing a network, reducing timings """
+        """ optimized way of initializing a network, reducing timings, returns the list of nodes """
         clihashes = deque(maxlen=len(idrange))
         # init the network, but already keep the has if the id in memory (avoid having to do extra hashing)
         for iditem in idrange:
@@ -266,13 +274,10 @@ class DHTNetwork:
             clihashes.append(clihash)
             self.add_new_node(dhtcli)
 
+        for _, dhtcli in self.nodestore.nodes.items():
+            self.nodestore.add_node(self.optimal_rt_for_cli(dhtcli, idrange, clihashes, bsize))
 
-
-        for dhtcli in self.nodestore.nodes:
-            pass
-
-
-
+        return self.nodestore.nodes
 
     def add_new_node(self, newnode: DHTClient):
         """ add a new node to the DHT network """

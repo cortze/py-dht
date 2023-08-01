@@ -34,6 +34,11 @@ def main(args):
     result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 3-
+    name, result_df = dht_network_fast_bootstrap(tag_base, iterations, k, network_size)
+    display_benchmark_metrics(name, result_df)
+    result_df.to_csv(out_folder + '/' + name + '.csv')
+
+    # 4-
     name, result_df = dht_network_bootstrap(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
     result_df.to_csv(out_folder+'/'+name+'.csv')
@@ -118,6 +123,31 @@ def dht_network_bootstrap(tag_base: str, i: int, k: int, network_size: int):
         number_of_times=i)
     df = b.run(timeout=0)
     return b_name, df
+
+def dht_network_fast_bootstrap(tag_base: str, i: int, k: int, network_size: int):
+    """ benchmarks the time it takes to spawn a network in the fastest possible way """
+    b_name = tag_base + f'_fast_bootstrap_network'
+
+    def task() -> float:
+        # init
+        idranges = range(1, network_size)
+        errorrate = 0
+        delayrange = None
+        network = DHTNetwork(0, errorrate, delayrange)
+
+        # measurement
+        start = time.time()
+        _ = network.init_with_random_peers(1, idranges, k, 1, k, 3)
+        return time.time() - start
+
+    b = Benchmark(
+        name='fast_bootstrap_network',
+        tag=tag_base,
+        task_to_measure=task,
+        number_of_times=i)
+    df = b.run(timeout=0)
+    return b_name, df
+
 
 
 

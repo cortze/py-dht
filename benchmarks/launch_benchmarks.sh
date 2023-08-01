@@ -5,7 +5,7 @@ VENV="../venv/bin/activate"
 
 # args
 TAG="27072023"
-OUTPUT="./csvs-opt2"
+OUTPUT="./csvs/opt3"
 ITERATIONS=10
 NETWORK_SIZE=10000
 K=20
