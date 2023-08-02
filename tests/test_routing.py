@@ -19,11 +19,11 @@ class TestDHTHashes(unittest.TestCase):
         # Firts, check the bucket didn't go beyond the size
         self.assertEqual(len(kbucket), bucketsize)
         zippedogs = zip(remoteids, ogs)
-        zippedogs = sorted(zippedogs, key = lambda pair: pair[1])
+        zippedogs = sorted(zippedogs, key=lambda pair: pair[1])
         # Second, ensure that the bucket has in fact the closest nodeIDs to the local ID
         distances = kbucket.get_distances_to_key(localhash)
         ids = kbucket.get_bucket_nodes()
-        zipped_b = sorted(zip(ids, distances), key = lambda pair: pair[1])
+        zipped_b = sorted(zip(ids, distances), key=lambda pair: pair[1])
         for idx, pair in enumerate(zipped_b):
             self.assertEqual(zippedogs[idx], pair)
 

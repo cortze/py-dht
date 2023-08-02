@@ -37,6 +37,53 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(summary['successful'], k)
         self.assertEqual(summary['failures'], 1)
 
+    def test_optimal_rt_for_dhtcli(self):
+        """ test the routing table of a dht cli using the fast approach """
+        k = 5
+        a = 1
+        b = k
+        nodeid = 1
+        steps4stop = 3
+        size = 100
+
+        network = DHTNetwork(0, 0, None)
+        classicnode = DHTClient(nodeid, network, k, a, b, steps4stop)
+        fastnode = DHTClient(nodeid, network, k, a, b, steps4stop)
+
+        nodeids = deque()
+        hashes = deque()
+        for n in range(size):
+            hashes.append(Hash(n))
+            nodeids.append(n)
+            classicnode.rt.new_discovered_peer(n)
+
+        fastnode = network.optimal_rt_for_cli(fastnode, nodeids, hashes, k)
+        for n in sorted(classicnode.rt.get_routing_nodes()):
+            self.assertTrue(n in fastnode.rt.get_routing_nodes())
+
+    def test_optimized_network_initialization(self):
+        """ test that the routing tables for each nodeID are correctly initialized """
+        k = 10
+        a = 1
+        b = k
+        step4stop = 3
+        size = 500
+        idrange = range(1, size+1)
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+
+        network = DHTNetwork(0, errorrate, delayrange)
+        network.init_with_random_peers(0, idrange, k, a, b, step4stop)
+
+        for nodeid in idrange:
+            node = DHTClient(nodeid, network, k, a, b, step4stop)
+            _ = node.bootstrap()
+            rtnodes = node.rt.get_routing_nodes()
+            fastrtnodes = network.nodestore.nodes[nodeid].rt.get_routing_nodes()
+            self.assertEqual(len(rtnodes), len(fastrtnodes))
+            for n in rtnodes:
+                self.assertTrue(n in fastrtnodes)
+
     def test_network_initialization(self):
         """ test that the routing tables for each nodeID are correctly initialized """
         k = 2
@@ -52,27 +99,6 @@ class TestNetwork(unittest.TestCase):
                 rt_aux.new_discovered_peer(otherNode.ID)
             # compare the rt from the network with the one from the real RoutingTable
             self.assertEqual(summary, rt_aux.summary())
-
-    def test_optimized_network_initialization(self):
-        """ test that the routing tables for each nodeID are correctly initialized """
-        k = 4
-        a = 1
-        b = k
-        step4stop = 3
-        size = 60
-        idrange = range(1, size)
-        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        delayrange = None  # ms
-
-        network = DHTNetwork(0, errorrate, delayrange)
-        _ = network.init_with_random_peers(0, idrange, k, a, b, step4stop)
-
-        for nodeid in idrange:
-            node = DHTClient(nodeid, network, k, a, b, step4stop)
-            c_summary = node.bootstrap()
-            print(c_summary)
-            print(network.nodestore.nodes[nodeid].rt.summary())
-            self.assertEqual(node.rt, network.nodestore.nodes[nodeid].rt)
 
     def test_dht_interop(self): 
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """ 
