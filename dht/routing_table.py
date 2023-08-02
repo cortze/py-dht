@@ -6,6 +6,7 @@ from collections import deque, defaultdict, OrderedDict
 class RoutingTable:
     def __init__(self, localnodeid:int, bucketsize:int) -> None:
         self.localnodeid = localnodeid
+        self.localnodehash = Hash(localnodeid)
         self.bucketsize = bucketsize
         self.kbuckets = deque()
         self.lastupdated = 0  # not really used at this time
@@ -13,10 +14,11 @@ class RoutingTable:
     def new_discovered_peer(self, nodeid:int):
         """ notify the routing table of a new discovered node
         in the network and check if it has a place in a given bucket """
+        if nodeid is self.localnodeid:
+            return
         # check matching bits
-        localnodehash = Hash(self.localnodeid)
         nodehash = Hash(nodeid)
-        sbits = localnodehash.shared_upper_bits(nodehash)
+        sbits = self.localnodehash.shared_upper_bits(nodehash)
         # Check if there is a kbucket already at that place
         while len(self.kbuckets) < sbits+1:
             # Fill middle kbuckets if needed
