@@ -18,7 +18,7 @@ class DHTClient:
     def __init__(self, nodeid: int, network, kbucketsize: int = 20, a: int = 1, b: int = 20, steptostop: int = 3):
         """ client builder -> init all the internals & compose the routing table"""
         self.ID = nodeid
-        self.hash = Hash(id)
+        self.hash = Hash(nodeid)
         self.network = network
         self.k = kbucketsize
         self.rt = RoutingTable(self.ID, kbucketsize)
@@ -245,21 +245,24 @@ class DHTNetwork:
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
 
-    def optimal_rt_for_cli(network, dhtcli, cliids, clihashes, bucketsize):
+    def optimal_rt_for_cli(self, dhtcli, cliids, clihashes, bucketsize):
         """ optimized operation for finding the most optimal nodes for a given id's rt """
-        distpersbits = deque()  # distances that would fall into each bucket
+        distpersbucket = deque()  # distances that would fall into each bucket
         nodeperdistance = defaultdict()  # key= distance val=nodeid
         for i, cli in enumerate(cliids):
+            if cli is dhtcli.ID:
+                continue
             sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
             dist = dhtcli.hash.xor_to_hash(clihashes[i])
-            while len(distpersbits) <= sbits:
-                distpersbits.append(deque())
-            distpersbits[sbits].append(dist)
+            while len(distpersbucket) < sbits+1:
+                distpersbucket.append(deque())
+            distpersbucket[sbits].append(dist)
             nodeperdistance[dist] = cli
 
-        for b in distpersbits:
-            distances = sorted(b)[:bucketsize]
-            for dist in distances:
+        cnt = 0
+        for b in distpersbucket:
+            cnt += 1
+            for dist in sorted(b)[:bucketsize]:
                 dhtcli.rt.new_discovered_peer(nodeperdistance[dist])
         return dhtcli
 
@@ -269,15 +272,15 @@ class DHTNetwork:
         clihashes = deque(maxlen=len(idrange))
         # init the network, but already keep the has if the id in memory (avoid having to do extra hashing)
         for iditem in idrange:
-            dhtcli = DHTClient(iditem, self, bsize, a, b, stepstop)
             clihash = Hash(iditem)
             clihashes.append(clihash)
-            self.add_new_node(dhtcli)
+            self.add_new_node(DHTClient(iditem, self, bsize, a, b, stepstop))
 
-        for _, dhtcli in self.nodestore.nodes.items():
-            self.nodestore.add_node(self.optimal_rt_for_cli(dhtcli, idrange, clihashes, bsize))
+        for cli in self.nodestore.nodes.values():
+            self.optimal_rt_for_cli(cli, idrange, clihashes, bsize)
+            # add it back to the nodestore
 
-        return self.nodestore.nodes
+        return self.nodestore.get_nodes()
 
     def add_new_node(self, newnode: DHTClient):
         """ add a new node to the DHT network """
@@ -317,6 +320,8 @@ class DHTNetwork:
         # TODO: generate a logic that selects the routing table with the given accuracy
         rt = RoutingTable(nodeid, bucketsize)
         for node in self.nodestore.get_nodes():
+            if node is nodeid:
+                continue
             rt.new_discovered_peer(node)
         return rt.get_routing_nodes()
 
