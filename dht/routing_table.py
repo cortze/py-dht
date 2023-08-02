@@ -1,6 +1,23 @@
-from ctypes import sizeof
 from dht.hashes import Hash
 from collections import deque, defaultdict, OrderedDict
+
+
+def optimalRTforDHTcli(dhtcli, cliids, clihashes, bucketsize):
+    idsanddistperbucket = deque()
+    for i, cli in enumerate(cliids):
+        if cli is dhtcli.ID:
+            continue
+        sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
+        dist = dhtcli.hash.xor_to_hash(clihashes[i])
+        while len(idsanddistperbucket) < sbits + 1:
+            idsanddistperbucket.append(deque())
+        idsanddistperbucket[sbits].append((cli, dist))
+
+
+    for i, b in enumerate(idsanddistperbucket):
+        for iddist in sorted(b, key=lambda pair: pair[1])[:bucketsize]:
+            dhtcli.rt.new_discovered_peer(iddist[0])
+    return dhtcli
 
 
 class RoutingTable:

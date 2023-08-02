@@ -1,9 +1,11 @@
 import random
 import time
+from concurrent.futures import ThreadPoolExecutor
 from collections import deque, defaultdict, OrderedDict
 from dht.key_store import KeyValueStore
-from dht.routing_table import RoutingTable
+from dht.routing_table import RoutingTable, optimalRTforDHTcli
 from dht.hashes import Hash
+from copy import deepcopy
 
 """ DHT Client """
 
@@ -245,26 +247,6 @@ class DHTNetwork:
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
 
-    def optimal_rt_for_cli(self, dhtcli, cliids, clihashes, bucketsize):
-        """ optimized operation for finding the most optimal nodes for a given id's rt """
-        distpersbucket = deque()  # distances that would fall into each bucket
-        nodeperdistance = defaultdict()  # key= distance val=nodeid
-        for i, cli in enumerate(cliids):
-            if cli is dhtcli.ID:
-                continue
-            sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
-            dist = dhtcli.hash.xor_to_hash(clihashes[i])
-            while len(distpersbucket) < sbits+1:
-                distpersbucket.append(deque())
-            distpersbucket[sbits].append(dist)
-            nodeperdistance[dist] = cli
-
-        cnt = 0
-        for b in distpersbucket:
-            cnt += 1
-            for dist in sorted(b)[:bucketsize]:
-                dhtcli.rt.new_discovered_peer(nodeperdistance[dist])
-        return dhtcli
 
 
     def init_with_random_peers(self, threads: int, idrange, bsize: int, a: int, b: int, stepstop: int):
@@ -276,10 +258,14 @@ class DHTNetwork:
             clihashes.append(clihash)
             self.add_new_node(DHTClient(iditem, self, bsize, a, b, stepstop))
 
-        for cli in self.nodestore.nodes.values():
-            self.optimal_rt_for_cli(cli, idrange, clihashes, bsize)
-            # add it back to the nodestore
-
+        if threads <= 1:
+            for node in self.nodestore.nodes.values():
+                optimalRTforDHTcli(node, idrange, clihashes, bsize)
+        else:
+            with ThreadPoolExecutor(threads) as executor:
+                for node in self.nodestore.nodes.values():
+                    future = executor.submit(optimalRTforDHTcli, node, idrange, clihashes, bsize)
+                    self.nodestore.add_node(future.result())
         return self.nodestore.get_nodes()
 
     def add_new_node(self, newnode: DHTClient):
