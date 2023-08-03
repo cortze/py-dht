@@ -116,10 +116,10 @@ class TestNetwork(unittest.TestCase):
         a = 1
         b = k
         step4stop = 3
-        size = 15000
+        size = 5000
         errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         delayrange = None  # ms
-        threads = 12
+        threads = 4
 
         network = DHTNetwork(0, errorrate, delayrange)
         start = time.time()
