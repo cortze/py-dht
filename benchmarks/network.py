@@ -12,6 +12,7 @@ def main(args):
     iterations = int(args.i)
     k = int(args.k)
     network_size = int(args.n)
+    threads = int(args.threads)
 
     # check if the output folder exists
     try:
@@ -39,9 +40,14 @@ def main(args):
     result_df.to_csv(out_folder + '/' + name + '.csv')
 
     # 4-
+    name, result_df = dht_network_fast_threaded_bootstrap(tag_base, threads, iterations, k, network_size)
+    display_benchmark_metrics(name, result_df)
+    result_df.to_csv(out_folder + '/' + name + '.csv')
+
+    # 5-
     name, result_df = dht_network_bootstrap(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name+'.csv')
+    result_df.to_csv(out_folder + '/' + name + '.csv')
 
     exit(0)
 
@@ -130,14 +136,13 @@ def dht_network_fast_bootstrap(tag_base: str, i: int, k: int, network_size: int)
 
     def task() -> float:
         # init
-        idranges = range(1, network_size)
         errorrate = 0
         delayrange = None
         network = DHTNetwork(0, errorrate, delayrange)
 
         # measurement
         start = time.time()
-        _ = network.init_with_random_peers(1, idranges, k, 1, k, 3)
+        _ = network.init_with_random_peers(1, network_size, k, 1, k, 3)
         return time.time() - start
 
     b = Benchmark(
@@ -148,6 +153,28 @@ def dht_network_fast_bootstrap(tag_base: str, i: int, k: int, network_size: int)
     df = b.run(timeout=0)
     return b_name, df
 
+def dht_network_fast_threaded_bootstrap(tag_base: str, threads:int, i: int, k: int, network_size: int):
+    """ benchmarks the time it takes to spawn a network in the fastest possible way """
+    b_name = tag_base + f'_fast_threaded_bootstrap_network'
+
+    def task() -> float:
+        # init
+        errorrate = 0
+        delayrange = None
+        network = DHTNetwork(0, errorrate, delayrange)
+
+        # measurement
+        start = time.time()
+        _ = network.init_with_random_peers(threads, network_size, k, 1, k, 3)
+        return time.time() - start
+
+    b = Benchmark(
+        name='fast_threaded_bootstrap_network',
+        tag=tag_base,
+        task_to_measure=task,
+        number_of_times=i)
+    df = b.run(timeout=0)
+    return b_name, df
 
 
 
@@ -159,6 +186,7 @@ if __name__ == "__main__":
     args.add_argument('-i')  # number of iterations (for statistical robustness)
     args.add_argument('-k')  # bucket size
     args.add_argument('-n')  # network size (to compose the rt)
+    args.add_argument('--threads')  # network size (to compose the rt)
     a = args.parse_args()
     main(a)
 
