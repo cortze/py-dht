@@ -1,20 +1,18 @@
-from dht.hashes import Hash
 from collections import deque, defaultdict, OrderedDict
+from dht.hashes import Hash
 
 
-def optimalRTforDHTcli(dhtcli, cliids, clihashes, bucketsize):
+def optimalRTforDHTcli(dhtcli, nodes, bucketsize):
     idsanddistperbucket = deque()
-    for i, cli in enumerate(cliids):
-        if cli is dhtcli.ID:
+    for nodeid, nodehash in nodes:
+        if nodeid == dhtcli.ID:
             continue
-        sbits = dhtcli.hash.shared_upper_bits(clihashes[i])
-        dist = dhtcli.hash.xor_to_hash(clihashes[i])
+        sbits = dhtcli.hash.shared_upper_bits(nodehash)
+        dist = dhtcli.hash.xor_to_hash(nodehash)
         while len(idsanddistperbucket) < sbits + 1:
             idsanddistperbucket.append(deque())
-        idsanddistperbucket[sbits].append((cli, dist))
-
-
-    for i, b in enumerate(idsanddistperbucket):
+        idsanddistperbucket[sbits].append((nodeid, dist))
+    for b in idsanddistperbucket:
         for iddist in sorted(b, key=lambda pair: pair[1])[:bucketsize]:
             dhtcli.rt.new_discovered_peer(iddist[0])
     return dhtcli

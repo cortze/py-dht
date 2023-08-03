@@ -1,19 +1,18 @@
+import os
 import random
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent import futures
+from concurrent.futures import ProcessPoolExecutor
 from collections import deque, defaultdict, OrderedDict
 from dht.key_store import KeyValueStore
 from dht.routing_table import RoutingTable, optimalRTforDHTcli
 from dht.hashes import Hash
-from copy import deepcopy
 
 """ DHT Client """
 
 
 class DHTClient:
-
     """ This class represents the client that participates and interacts with the simulated DHT"""
-
     def __repr__(self) -> str:
         return "DHT-cli-"+str(self.ID)
 
@@ -247,25 +246,46 @@ class DHTNetwork:
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
 
+    def parallel_clilist_initializer(self, clilist, nodes, k):
+        clis = deque(maxlen=len(clilist))
+        for cli in clilist:
+            clis.append(optimalRTforDHTcli(cli, nodes, k))
+        return clis
 
-
-    def init_with_random_peers(self, threads: int, idrange, bsize: int, a: int, b: int, stepstop: int):
+    def init_with_random_peers(self, processes: int, nodesize: int, bsize: int, a: int, b: int, stepstop: int):
         """ optimized way of initializing a network, reducing timings, returns the list of nodes """
-        clihashes = deque(maxlen=len(idrange))
+        # load balancing
+        tasks = int(nodesize / processes)
+        if nodesize % processes > 0:
+            tasks += 1
+        nodetasks = deque(maxlen=processes)
+        nodes = deque(maxlen=nodesize)
+        for t in range(processes):
+            nodetasks.append(deque(maxlen=tasks))
         # init the network, but already keep the has if the id in memory (avoid having to do extra hashing)
-        for iditem in idrange:
+        t, c = 0, 0
+        for iditem in range(nodesize):
             clihash = Hash(iditem)
-            clihashes.append(clihash)
-            self.add_new_node(DHTClient(iditem, self, bsize, a, b, stepstop))
+            dhtcli = DHTClient(iditem, self, bsize, a, b, stepstop)
+            nodes.append((iditem, clihash))
+            nodetasks[t].append(dhtcli)
+            self.add_new_node(dhtcli)
+            c += 1
+            if c >= tasks:
+                c = 0
+                t += 1
 
-        if threads <= 1:
-            for node in self.nodestore.nodes.values():
-                optimalRTforDHTcli(node, idrange, clihashes, bsize)
+        if processes <= 1:
+            for cli in self.nodestore.nodes.values():
+                optimalRTforDHTcli(cli, nodes, bsize)
         else:
-            with ThreadPoolExecutor(threads) as executor:
-                for node in self.nodestore.nodes.values():
-                    future = executor.submit(optimalRTforDHTcli, node, idrange, clihashes, bsize)
-                    self.nodestore.add_node(future.result())
+            with ProcessPoolExecutor(max_workers=processes) as executor:
+                inits = [executor.submit(self.parallel_clilist_initializer, nodelist, nodes, bsize) for nodelist in nodetasks]
+                futures.wait(inits, return_when=futures.FIRST_EXCEPTION)
+            for future in inits:
+                clis = future.result()
+                for cli in clis:
+                    self.nodestore.add_node(cli)
         return self.nodestore.get_nodes()
 
     def add_new_node(self, newnode: DHTClient):
@@ -306,7 +326,7 @@ class DHTNetwork:
         # TODO: generate a logic that selects the routing table with the given accuracy
         rt = RoutingTable(nodeid, bucketsize)
         for node in self.nodestore.get_nodes():
-            if node is nodeid:
+            if node == nodeid:
                 continue
             rt.new_discovered_peer(node)
         return rt.get_routing_nodes()
