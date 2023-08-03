@@ -1,7 +1,9 @@
 import random
-from types import ClassMethodDescriptorType
 import unittest
-from dht.routing_table import RoutingTable
+import time
+from collections import deque
+from concurrent.futures import ProcessPoolExecutor
+from dht.routing_table import RoutingTable, optimalRTforDHTcli
 from dht.dht import DHTClient, ConnectionError, DHTNetwork
 from dht.hashes import Hash
 
@@ -36,6 +38,93 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(summary['attempts'], k+1)
         self.assertEqual(summary['successful'], k)
         self.assertEqual(summary['failures'], 1)
+
+    def test_optimal_rt_for_dhtcli(self):
+        """ test the routing table of a dht cli using the fast approach """
+        k = 5
+        a = 1
+        b = k
+        nodeid = 1
+        steps4stop = 3
+        size = 100
+
+        network = DHTNetwork(0, 0, None)
+        classicnode = DHTClient(nodeid, network, k, a, b, steps4stop)
+        fastnode = DHTClient(nodeid, network, k, a, b, steps4stop)
+
+        nodes = deque()
+        for n in range(size):
+            nodes.append((n, Hash(n)))
+            classicnode.rt.new_discovered_peer(n)
+
+        fastnode = optimalRTforDHTcli(fastnode, nodes, k)
+        for n in sorted(classicnode.rt.get_routing_nodes()):
+            self.assertTrue(n in fastnode.rt.get_routing_nodes())
+
+    def test_fast_network_initialization(self):
+        """ test that the routing tables for each nodeID are correctly initialized """
+        k = 10
+        a = 1
+        b = k
+        step4stop = 3
+        size = 1000
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+
+        network = DHTNetwork(0, errorrate, delayrange)
+        network.init_with_random_peers(1, size, k, a, b, step4stop)
+
+        for nodeid in range(size):
+            node = DHTClient(nodeid, network, k, a, b, step4stop)
+            _ = node.bootstrap()
+            rtnodes = node.rt.get_routing_nodes()
+            fastrtnodes = network.nodestore.nodes[nodeid].rt.get_routing_nodes()
+            self.assertFalse(nodeid in rtnodes)
+            self.assertFalse(nodeid in fastrtnodes)
+            self.assertEqual(len(rtnodes), len(fastrtnodes))
+            for n in rtnodes:
+                self.assertTrue(n in fastrtnodes)
+
+    def test_threaded_fast_network_initialization(self):
+        """ test that the routing tables for each nodeID are correctly initialized """
+        k = 10
+        a = 1
+        b = k
+        step4stop = 3
+        size = 1000
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        threads = 2
+
+        network = DHTNetwork(0, errorrate, delayrange)
+        network.init_with_random_peers(threads, size, k, a, b, step4stop)
+
+        for nodeid in range(size):
+            node = DHTClient(nodeid, network, k, a, b, step4stop)
+            _ = node.bootstrap()
+            rtnodes = node.rt.get_routing_nodes()
+            fastrtnodes = network.nodestore.nodes[nodeid].rt.get_routing_nodes()
+            self.assertFalse(nodeid in rtnodes)
+            self.assertFalse(nodeid in fastrtnodes)
+            self.assertEqual(len(rtnodes), len(fastrtnodes))
+            for n in rtnodes:
+                self.assertTrue(n in fastrtnodes)
+
+    def test_threading(self):
+        """ test that the routing tables for each nodeID are correctly initialized """
+        k = 10
+        a = 1
+        b = k
+        step4stop = 3
+        size = 5000
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        threads = 4
+
+        network = DHTNetwork(0, errorrate, delayrange)
+        start = time.time()
+        _ = network.init_with_random_peers(threads, size, k, a, b, step4stop)
+        print(f'{size} nodes in {time.time() - start} - {threads} cores')
 
     def test_network_initialization(self):
         """ test that the routing tables for each nodeID are correctly initialized """

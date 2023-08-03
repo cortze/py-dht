@@ -62,7 +62,7 @@ class Benchmark:
             df = pd.DataFrame(pd_rows)
         except TypeError as e:
             print(f"error with benchmark {self.name} ({self.tag})")
-            raise NonSucceedBenchmark()
+            raise NonSucceedBenchmark(e)
         return df
 
 

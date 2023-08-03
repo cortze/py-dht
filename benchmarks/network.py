@@ -12,6 +12,7 @@ def main(args):
     iterations = int(args.i)
     k = int(args.k)
     network_size = int(args.n)
+    threads = int(args.threads)
 
     # check if the output folder exists
     try:
@@ -34,25 +35,35 @@ def main(args):
     result_df.to_csv(out_folder+'/'+name+'.csv')
 
     # 3-
+    name, result_df = dht_network_fast_bootstrap(tag_base, iterations, k, network_size)
+    display_benchmark_metrics(name, result_df)
+    result_df.to_csv(out_folder + '/' + name + '.csv')
+
+    # 4-
+    name, result_df = dht_network_fast_threaded_bootstrap(tag_base, threads, iterations, k, network_size)
+    display_benchmark_metrics(name, result_df)
+    result_df.to_csv(out_folder + '/' + name + '.csv')
+
+    # 5-
     name, result_df = dht_network_bootstrap(tag_base, iterations, k, network_size)
     display_benchmark_metrics(name, result_df)
-    result_df.to_csv(out_folder+'/'+name+'.csv')
+    result_df.to_csv(out_folder + '/' + name + '.csv')
 
     exit(0)
 
 
 def gen_network(k: int, network_size: int):
     node_ids = random.sample(range(network_size), network_size)
-    network = DHTNetwork(networkID=0, errorRate=0)
+    network = DHTNetwork(networkid=0, errorrate=0, delayrange=None)
     for node in node_ids:
-        node = DHTClient(node, network, k, a=3, b=k, stuckMaxCnt=5)
+        node = DHTClient(node, network, k, a=3, b=k, steptostop=5)
         network.add_new_node(node)
     return network, node_ids
 
 
 def get_dht_cli(network):
     random_id = random.sample(range(network.len()), 1)[0]
-    dht_cli = network.nodeStore.get_node(random_id)
+    dht_cli = network.nodestore.get_node(random_id)
     return dht_cli
 
 
@@ -86,7 +97,7 @@ def dht_network_bootstrap_node(tag_base: str, i: int, k: int, network_size: int)
 
         # measurement
         start = time.time()
-        _ = n.bootstrap_node(p.ID, k, 100)
+        _ = n.bootstrap_node(p.ID, k)
         return time.time() - start
 
     b = Benchmark(
@@ -108,11 +119,57 @@ def dht_network_bootstrap(tag_base: str, i: int, k: int, network_size: int):
         # measurement
         start = time.time()
         for id in ids:
-            _ = n.bootstrap_node(id, k, 100)
+            _ = n.bootstrap_node(id, k)
         return time.time() - start
 
     b = Benchmark(
         name='bootstrap_network',
+        tag=tag_base,
+        task_to_measure=task,
+        number_of_times=i)
+    df = b.run(timeout=0)
+    return b_name, df
+
+def dht_network_fast_bootstrap(tag_base: str, i: int, k: int, network_size: int):
+    """ benchmarks the time it takes to spawn a network in the fastest possible way """
+    b_name = tag_base + f'_fast_bootstrap_network'
+
+    def task() -> float:
+        # init
+        errorrate = 0
+        delayrange = None
+        network = DHTNetwork(0, errorrate, delayrange)
+
+        # measurement
+        start = time.time()
+        _ = network.init_with_random_peers(1, network_size, k, 1, k, 3)
+        return time.time() - start
+
+    b = Benchmark(
+        name='fast_bootstrap_network',
+        tag=tag_base,
+        task_to_measure=task,
+        number_of_times=i)
+    df = b.run(timeout=0)
+    return b_name, df
+
+def dht_network_fast_threaded_bootstrap(tag_base: str, threads:int, i: int, k: int, network_size: int):
+    """ benchmarks the time it takes to spawn a network in the fastest possible way """
+    b_name = tag_base + f'_fast_threaded_bootstrap_network'
+
+    def task() -> float:
+        # init
+        errorrate = 0
+        delayrange = None
+        network = DHTNetwork(0, errorrate, delayrange)
+
+        # measurement
+        start = time.time()
+        _ = network.init_with_random_peers(threads, network_size, k, 1, k, 3)
+        return time.time() - start
+
+    b = Benchmark(
+        name='fast_threaded_bootstrap_network',
         tag=tag_base,
         task_to_measure=task,
         number_of_times=i)
@@ -129,6 +186,7 @@ if __name__ == "__main__":
     args.add_argument('-i')  # number of iterations (for statistical robustness)
     args.add_argument('-k')  # bucket size
     args.add_argument('-n')  # network size (to compose the rt)
+    args.add_argument('--threads')  # network size (to compose the rt)
     a = args.parse_args()
     main(a)
 
