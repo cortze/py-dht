@@ -1,6 +1,7 @@
 # ignore all the cache folders coming from python
 */__pycache__/
 *.egg-info/
+build/
 
 # all the test files that serve as local pre-tests
 dht/miscelaneous.py
