@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import multiprocessing
 from concurrent import futures
 from concurrent.futures import ProcessPoolExecutor
 from collections import deque, defaultdict, OrderedDict
@@ -254,6 +255,9 @@ class DHTNetwork:
 
     def init_with_random_peers(self, processes: int, nodesize: int, bsize: int, a: int, b: int, stepstop: int):
         """ optimized way of initializing a network, reducing timings, returns the list of nodes """
+        if processes <= 0:
+            processes = multiprocessing.cpu_count()
+
         # load balancing
         tasks = int(nodesize / processes)
         if nodesize % processes > 0:
