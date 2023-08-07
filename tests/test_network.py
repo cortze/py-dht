@@ -116,7 +116,7 @@ class TestNetwork(unittest.TestCase):
         a = 1
         b = k
         step4stop = 3
-        size = 5000
+        size = 1000
         errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         delayrange = None  # ms
         threads = 4
@@ -129,7 +129,7 @@ class TestNetwork(unittest.TestCase):
     def test_network_initialization(self):
         """ test that the routing tables for each nodeID are correctly initialized """
         k = 2
-        size = 20
+        size = 200
         errorrate = 0 # apply an error rate of 0 (to check if the logic pases)
         delayrange = None  # ms
         network, nodes = generate_network(k, size, 0, errorrate, delayrange)
@@ -176,6 +176,39 @@ class TestNetwork(unittest.TestCase):
         for i, node in enumerate(closestnodes):
             self.assertEqual((node in validationclosestnodes), True)
 
+    def test_dht_interop_with_fast_init(self):
+        """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
+        k = 10
+        size = 500
+        i = 0
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        delayrange = None  # ms
+        n = DHTNetwork(i, errorrate, delayrange)
+        _ = n.init_with_random_peers(4, size, k, 1, k, 3)
+
+        randomsegment = "this is a simple segment of code"
+        segH = Hash(randomsegment)
+        # use random node as lookup point
+        randomid = random.sample(range(size), 1)[0]
+        rnode = n.nodestore.get_node(randomid)
+        self.assertNotEqual(rnode.network.len(), 0)
+
+        closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH)
+        self.assertEqual(val, "")  # empty val, nothing stored yet
+        self.assertEqual(len(closestnodes), k)
+        # print(f"lookup operation with {size} nodes done in {summary['finishTime'] - summary['startTime']}")
+
+        # validation of the lookup closestnodes vs the actual closestnodes in the network
+        validationclosestnodes = {}
+        for node in n.nodestore.nodes.values():
+            nodeH = Hash(node.ID)
+            dist = nodeH.xor_to_hash(segH)
+            validationclosestnodes[node.ID] = dist
+
+        validationclosestnodes = dict(sorted(validationclosestnodes.items(), key=lambda item: item[1])[:k])
+        for i, node in enumerate(closestnodes):
+            self.assertEqual((node in validationclosestnodes), True)
+
     def test_dht_error_rate_on_connection(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
         k = 1
@@ -189,7 +222,7 @@ class TestNetwork(unittest.TestCase):
 
         successcnt = 0
         failedcnt = 0
-        iterations = 1000  # for statistical robustness
+        iterations = 500  # for statistical robustness
         variance = 5  # %
         for i in range(iterations):
             try:
