@@ -53,13 +53,13 @@ class DHTClient:
 
         closestnodes = self.rt.get_closest_nodes_to(key)
         nodestotry = closestnodes.copy()
-        newnodes = defaultdict()
-        lookupvalue = ""
+        triednodes = deque()
+        lookupvalue = ""  # TODO: hardcoded to string
         stepscnt = 0
         concurrency = 0
         def has_closer_nodes(prev, new):
-            for node, dist in new.items():
-                if node in prev:
+            for n, dist in new.items():
+                if n in prev:
                     continue
                 for _, existingDist in prev.items():
                     if dist < existingDist:
@@ -68,18 +68,16 @@ class DHTClient:
                         continue
             return False
 
-        def not_tracked(total, newones):
-            newnodes = defaultdict()
-            for node, dist in newones.items():
-                if node not in total:
-                    newnodes[node] = dist
-            return newnodes
-        
         while (stepscnt < self.lookupsteptostop) and (len(nodestotry) > 0):
             # ask queued nodes to try
-            for node in list(nodestotry):
+            nodes = nodestotry.copy()
+            for node in nodes:
+                nodestotry.pop(node)  # remove item from peers to attempt
+                if node in triednodes:  # make sure we don't contact the same node twice
+                    continue
+                triednodes.append(node)
                 lookupsummary['connectionAttempts'] += 1
-                try: 
+                try:
                     connection, conndelay = self.network.connect_to_node(self.ID, node)
                     lookupsummary['aggrDelay'] += conndelay
                     newnodes, val, ok, closestdelay = connection.get_closest_nodes_to(key)
@@ -89,9 +87,8 @@ class DHTClient:
                     lookupsummary['successfulCons'] += 1
                     if has_closer_nodes(closestnodes, newnodes):
                         stepscnt = 0
-                        nontrackednodes = not_tracked(closestnodes, newnodes)
-                        closestnodes.update(nontrackednodes)
-                        nodestotry.update(nontrackednodes)
+                        closestnodes.update(newnodes)
+                        nodestotry.update(newnodes)
                         nodestotry = OrderedDict(sorted(nodestotry.items(), key= lambda item: item[1]))
                     else: 
                         stepscnt += 1
@@ -99,11 +96,8 @@ class DHTClient:
                     lookupsummary['failedCons'] += 1
                     stepscnt += 1
                 concurrency += 1 
-                if concurrency >= self.alpha:
+                if concurrency >= self.alpha or stepscnt:
                     break
-            else:
-                # concurrency limit reached, refresh who to ask later
-                pass
 
         # finish with the summary
         lookupsummary.update({
@@ -257,7 +251,6 @@ class DHTNetwork:
         """ optimized way of initializing a network, reducing timings, returns the list of nodes """
         if processes <= 0:
             processes = multiprocessing.cpu_count()
-
         # load balancing
         tasks = int(nodesize / processes)
         if nodesize % processes > 0:
@@ -289,7 +282,10 @@ class DHTNetwork:
             for future in inits:
                 clis = future.result()
                 for cli in clis:
-                    self.nodestore.add_node(cli)
+                    self.add_new_node(cli)
+            # make sure that all clients have latest version of the network (necessary for high level of concurrency)
+            for cli in self.nodestore.nodes.values():
+                cli.network = self
         return self.nodestore.get_nodes()
 
     def add_new_node(self, newnode: DHTClient):
@@ -306,8 +302,7 @@ class DHTNetwork:
                 connerror = ConnectionError(targetnode, "simulated error", time.time())
                 self.errortracker.append(connerror)
                 raise connerror
-            node = self.nodestore.get_node(targetnode)
-            connection = Connection(self.connectioncnt, ognode, node, self.delayrange)
+            connection = Connection(self.connectioncnt, ognode, self.nodestore.get_node(targetnode), self.delayrange)
             self.connectiontracker.append({
                 'time': time.time(),
                 'from': ognode,
