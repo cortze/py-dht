@@ -145,7 +145,7 @@ class TestNetwork(unittest.TestCase):
     def test_dht_interop(self): 
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """ 
         k = 10
-        size = 500 
+        size = 500
         id = 0
         errorrate = 0 # apply an error rate of 0 (to check if the logic pases)
         delayrange = None  # ms
@@ -305,6 +305,42 @@ class TestNetwork(unittest.TestCase):
         worstdelay = totdelays * maxDelay
         self.assertGreater(aggrdelay, bestdelay)
         self.assertLess(aggrdelay, worstdelay)
+
+    def test_aggregated_delays_and_alpha(self):
+        """ test if the interaction between the nodes in the network actually generate a compounded delay """
+        size = 500
+        i = 0
+        k = 10
+        jobs = 2
+        alpha = 3
+        beta = k
+        stepstostop = 3
+        errorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+
+        delay = 50  # ms
+        delayrange = [delay, delay]  # ms
+
+        # init the network
+        n = DHTNetwork(i, errorrate, delayrange)
+        _ = n.init_with_random_peers(jobs, size, k, alpha, beta, stepstostop)
+
+        # use random node as lookup point
+        publishernodeid = random.sample(range(1, size), 1)[0]
+        pnode = n.nodestore.get_node(publishernodeid)
+        self.assertNotEqual(pnode.network.len(), 0)
+
+        # lookup
+        randomSegment = "my rollup sample"
+        segH = Hash(randomSegment)
+        interestednodeid = random.sample(range(1, size), 1)[0]
+        inode = n.nodestore.get_node(interestednodeid)
+        closestnodes, _, summary, aggrdelay = inode.lookup_for_hash(segH)
+        self.assertEqual(len(closestnodes), k)
+        lookuppeers = summary['connectionAttempts']
+        rounds = int(lookuppeers / alpha)
+        if (lookuppeers % alpha) > 0:
+            rounds += 1
+        self.assertEqual(aggrdelay, rounds * (delay*2))
 
 def generate_network(k, size, id, errorrate, delayrate):
     network = DHTNetwork(id, errorrate, delayrate)
