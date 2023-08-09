@@ -90,8 +90,8 @@ class KBucket:
         dist = self.localnodehash.xor_to_hash(nodehash)
         bucketdistances = self.get_distances_to_key(self.localnodehash)
         if len(self) >= self.bucketsize:
-            maxDistId = max(bucketdistances.items(), key=lambda localDist: localDist[1])[0]
-            if maxDistId < dist:
+            maxDistId, maxDist = max(bucketdistances.items(), key=lambda localDist: localDist[1])
+            if maxDist < dist:
                 pass
             else:
                 self.bucketnodes.pop(maxDistId)
