@@ -1,4 +1,5 @@
 import unittest
+from collections import OrderedDict
 from dht.routing_table import RoutingTable, KBucket
 from dht.hashes import Hash
 
@@ -22,9 +23,8 @@ class TestDHTHashes(unittest.TestCase):
         zippedogs = sorted(zippedogs, key=lambda pair: pair[1])
         # Second, ensure that the bucket has in fact the closest nodeIDs to the local ID
         distances = kbucket.get_distances_to_key(localhash)
-        ids = kbucket.get_bucket_nodes()
-        zipped_b = sorted(zip(ids, distances), key=lambda pair: pair[1])
-        for idx, pair in enumerate(zipped_b):
+        orderddistances = sorted(distances.items(), key=lambda pair: pair[1])
+        for idx, pair in enumerate(orderddistances):
             self.assertEqual(zippedogs[idx], pair)
 
     def test_routing_table(self):
