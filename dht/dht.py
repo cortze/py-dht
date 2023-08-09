@@ -51,12 +51,6 @@ class DHTClient:
             'aggrDelay': 0,
         }
 
-        closestnodes = self.rt.get_closest_nodes_to(key)
-        nodestotry = closestnodes.copy()
-        triednodes = deque()
-        lookupvalue = ""  # TODO: hardcoded to string
-        stepscnt = 0
-        concurrency = 0
         def has_closer_nodes(prev, new):
             for n, dist in new.items():
                 if n in prev:
@@ -68,9 +62,17 @@ class DHTClient:
                         continue
             return False
 
+        closestnodes = self.rt.get_closest_nodes_to(key)
+        nodestotry = closestnodes.copy()
+        triednodes = deque()
+        lookupvalue = ""  # TODO: hardcoded to string
+        stepscnt = 0
+
         while (stepscnt < self.lookupsteptostop) and (len(nodestotry) > 0):
             # ask queued nodes to try
             nodes = nodestotry.copy()
+            aggregateddelay = 0
+            concurrency = 0
             for node in nodes:
                 nodestotry.pop(node)  # remove item from peers to attempt
                 if node in triednodes:  # make sure we don't contact the same node twice
@@ -79,11 +81,12 @@ class DHTClient:
                 lookupsummary['connectionAttempts'] += 1
                 try:
                     connection, conndelay = self.network.connect_to_node(self.ID, node)
-                    lookupsummary['aggrDelay'] += conndelay
                     newnodes, val, ok, closestdelay = connection.get_closest_nodes_to(key)
                     if ok:
                         lookupvalue = val
-                    lookupsummary['aggrDelay'] += closestdelay
+                    operationdelay = conndelay + closestdelay
+                    if operationdelay > aggregateddelay:
+                        aggregateddelay = operationdelay
                     lookupsummary['successfulCons'] += 1
                     if has_closer_nodes(closestnodes, newnodes):
                         stepscnt = 0
@@ -93,10 +96,17 @@ class DHTClient:
                     else: 
                         stepscnt += 1
                 except ConnectionError:
+                    # count the delay of the connection attempt
+                    # TODO: take into account fast vs slow errors (https://github.com/cortze/py-dht/issues/14)
+                    if self.network.delayrange is not None:
+                        connErrorDelay = random.sample(self.network.delayrange, 1)[0]
+                        if connErrorDelay > aggregateddelay:
+                            aggregateddelay = connErrorDelay
                     lookupsummary['failedCons'] += 1
                     stepscnt += 1
                 concurrency += 1 
-                if concurrency >= self.alpha or stepscnt:
+                if concurrency >= self.alpha or stepscnt >= self.lookupsteptostop:
+                    lookupsummary['aggrDelay'] += aggregateddelay
                     break
 
         # finish with the summary
