@@ -469,7 +469,7 @@ class TestNetwork(unittest.TestCase):
         inode = n.nodestore.get_node(interestednodeid)
         closestnodes, _, summary, aggrdelay = inode.lookup_for_hash(segH)
         self.assertEqual(len(closestnodes), k)
-        rounds = summary['connectionFinished'] / alpha
+        rounds = int(summary['connectionFinished'] / alpha)
         if (summary['connectionFinished'] % alpha) > 0:
             rounds += 1
         self.assertEqual(aggrdelay, rounds * (delay*2))
