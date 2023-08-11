@@ -96,7 +96,7 @@ class DHTClient:
 
                 except ConnectionError as e:
                     errortype, errordelay = e.get_delay()
-                    alpha_results.append((errordelay, (), ""))
+                    alpha_results.append((errordelay, {}, ""))
                     alpha_results = deque(sorted(alpha_results, key=lambda pair: pair[0]))
 
                 # check if the concurrency array is full
