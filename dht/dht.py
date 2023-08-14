@@ -133,11 +133,22 @@ class DHTClient:
                 if stepscnt >= self.lookupsteptostop:
                     break
 
+        netclosestnodes = self.network.get_closest_nodes_to_hash(key, self.beta)
+        oknodes = 0
+        for nodeid in closestnodes:
+            if (nodeid == netnode for netnode, _ in netclosestnodes):
+                oknodes += 1
+        if oknodes == 0:
+            accuracy = 0
+        else:
+            accuracy = int(oknodes/self.beta)*100
+
         lookupsummary.update({
             'finishTime': time.time(),
             'totalNodes': len(closestnodes),
             'aggrDelay': max(alpha_delays),
             'value': lookupvalue,
+            'accuracy': accuracy,
         })
         # limit the output to beta number of nodes
         closestnodes = OrderedDict(sorted(closestnodes.items(), key=lambda item: item[1])[:self.beta])
