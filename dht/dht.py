@@ -6,7 +6,7 @@ from concurrent import futures
 from concurrent.futures import ProcessPoolExecutor
 from collections import deque, defaultdict, OrderedDict
 from dht.key_store import KeyValueStore
-from dht.routing_table import RoutingTable, optimalRTforDHTcli
+from dht.routing_table import RoutingTable
 from dht.hashes import Hash
 
 """ DHT Client """
@@ -133,11 +133,22 @@ class DHTClient:
                 if stepscnt >= self.lookupsteptostop:
                     break
 
+        netclosestnodes = self.network.get_closest_nodes_to_hash(key, self.beta)
+        oknodes = 0
+        for nodeid in closestnodes:
+            if (nodeid == netnode for netnode, _ in netclosestnodes):
+                oknodes += 1
+        if oknodes == 0:
+            accuracy = 0
+        else:
+            accuracy = int(oknodes/self.beta)*100
+
         lookupsummary.update({
             'finishTime': time.time(),
             'totalNodes': len(closestnodes),
             'aggrDelay': max(alpha_delays),
             'value': lookupvalue,
+            'accuracy': accuracy,
         })
         # limit the output to beta number of nodes
         closestnodes = OrderedDict(sorted(closestnodes.items(), key=lambda item: item[1])[:self.beta])
@@ -284,10 +295,32 @@ class DHTNetwork:
         self.connectiontracker = deque()  # every time that a connection was stablished
         self.connectioncnt = 0
 
+    def get_closest_nodes_to_hash(self, target: Hash, beta):
+        closestnodes = deque(maxlen=self.nodestore.len())
+        for cliid, cli in self.nodestore.nodes.items():
+            dist = cli.hash.xor_to_hash(target)
+            closestnodes.append((cliid, dist))
+        return sorted(closestnodes, key=lambda dist: dist[1])[:beta] 
+
+    def optimal_rt_for_dht_cli(self, dhtcli, nodes, bucketsize):
+        idsanddistperbucket = deque()
+        for nodeid, nodehash in nodes:
+            if nodeid == dhtcli.ID:
+                continue
+            sbits = dhtcli.hash.shared_upper_bits(nodehash)
+            dist = dhtcli.hash.xor_to_hash(nodehash)
+            while len(idsanddistperbucket) < sbits + 1:
+                idsanddistperbucket.append(deque())
+            idsanddistperbucket[sbits].append((nodeid, dist))
+        for b in idsanddistperbucket:
+            for iddist in sorted(b, key=lambda pair: pair[1])[:bucketsize]:
+                dhtcli.rt.new_discovered_peer(iddist[0])
+        return dhtcli
+
     def parallel_clilist_initializer(self, clilist, nodes, k):
         clis = deque(maxlen=len(clilist))
         for cli in clilist:
-            clis.append(optimalRTforDHTcli(cli, nodes, k))
+            clis.append(self.optimal_rt_for_dht_cli(cli, nodes, k))
         return clis
 
     def init_with_random_peers(self, processes: int, nodesize: int, bsize: int, a: int, b: int, stepstop: int):
@@ -317,7 +350,7 @@ class DHTNetwork:
 
         if processes <= 1:
             for cli in self.nodestore.nodes.values():
-                optimalRTforDHTcli(cli, nodes, bsize)
+                self.optimal_rt_for_dht_cli(cli, nodes, bsize)
         else:
             with ProcessPoolExecutor(max_workers=processes) as executor:
                 inits = [executor.submit(self.parallel_clilist_initializer, nodelist, nodes, bsize) for nodelist in nodetasks]

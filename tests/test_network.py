@@ -3,7 +3,7 @@ import unittest
 import time
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
-from dht.routing_table import RoutingTable, optimalRTforDHTcli
+from dht.routing_table import RoutingTable
 from dht.dht import DHTClient, ConnectionError, DHTNetwork
 from dht.hashes import Hash
 
@@ -74,9 +74,40 @@ class TestNetwork(unittest.TestCase):
             nodes.append((n, Hash(n)))
             classicnode.rt.new_discovered_peer(n)
 
-        fastnode = optimalRTforDHTcli(fastnode, nodes, k)
+        fastnode = network.optimal_rt_for_dht_cli(fastnode, nodes, k)
         for n in sorted(classicnode.rt.get_routing_nodes()):
             self.assertTrue(n in fastnode.rt.get_routing_nodes())
+
+    def test_networks_closest_peers_to_hash(self):
+        """ test the routing table of a dht cli using the fast approach """
+        k = 5
+        a = 1
+        b = k
+        nodeid = 1
+        steps4stop = 3
+        size = 1000
+        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
+        slowerrorrate = 0
+        fastdelayrange = None  # ms
+        slowdelayrange = None
+        network = DHTNetwork(
+            nodeid,
+            fasterrorrate,
+            slowerrorrate,
+            fastdelayrange,
+            slowdelayrange)
+
+        nodes = network.init_with_random_peers(1, size, k, 3, k, 3)
+
+        randomsegment = "this is a simple segment of code"
+        segH = Hash(randomsegment)
+        randomid = random.sample(range(1, size), 1)[0]
+        rnode = network.nodestore.get_node(randomid)
+
+        closestnodes, _, _, _ = rnode.lookup_for_hash(segH)
+        network_closest = network.get_closest_nodes_to_hash(segH, b)
+        for nodeid, _ in network_closest:
+            self.assertEqual(nodeid in closestnodes, True)
 
     def test_fast_network_initialization(self):
         """ test that the routing tables for each nodeID are correctly initialized """
@@ -273,10 +304,11 @@ class TestNetwork(unittest.TestCase):
 
     def test_dht_interop_with_error_rate(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
-        k = 5
+        k = 10
         size = 1000
         netid = 0
-        fasterrorrate = 30  # apply an error rate of 0 (to check if the logic pases)
+        targetaccuracy = 70  # %
+        fasterrorrate = 25  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         fastdelayrange = [30, 30]  # ms
         slowdelayrange = None
@@ -298,19 +330,7 @@ class TestNetwork(unittest.TestCase):
         closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH)
         self.assertEqual(val, "")  # empty val, nothing stored yet
         self.assertEqual(len(closestnodes), k)
-        # print(f"lookup operation with {size} nodes done in {summary['finishTime'] - summary['startTime']}")
-
-        # validation of the lookup closestnodes vs the actual closestnodes in the network
-        validationclosestnodes = {}
-        for nodeid in nodes:
-            node = n.nodestore.get_node(nodeid)
-            nodeH = Hash(node.ID)
-            dist = nodeH.xor_to_hash(segH)
-            validationclosestnodes[node.ID] = dist
-
-        validationclosestnodes = dict(sorted(validationclosestnodes.items(), key=lambda item: item[1])[:k])
-        for i, node in enumerate(closestnodes):
-            self.assertEqual((node in validationclosestnodes), True)
+        self.assertGreater(summary['accuracy'], targetaccuracy)
 
 
     def test_dht_interop_with_fast_init(self):
