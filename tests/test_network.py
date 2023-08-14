@@ -271,6 +271,48 @@ class TestNetwork(unittest.TestCase):
         for i, node in enumerate(closestnodes):
             self.assertEqual((node in validationclosestnodes), True)
 
+    def test_dht_interop_with_error_rate(self):
+        """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
+        k = 5
+        size = 1000
+        netid = 0
+        fasterrorrate = 30  # apply an error rate of 0 (to check if the logic pases)
+        slowerrorrate = 0
+        fastdelayrange = [30, 30]  # ms
+        slowdelayrange = None
+        n = DHTNetwork(
+            netid,
+            fasterrorrate,
+            slowerrorrate,
+            fastdelayrange,
+            slowdelayrange)
+        nodes = n.init_with_random_peers(1, size, k, 3, k, 3)
+
+        randomsegment = "this is a simple segment of code"
+        segH = Hash(randomsegment)
+        # use random node as lookup point
+        randomid = random.sample(range(1, size), 1)[0]
+        rnode = n.nodestore.get_node(randomid)
+        self.assertNotEqual(rnode.network.len(), 0)
+
+        closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH)
+        self.assertEqual(val, "")  # empty val, nothing stored yet
+        self.assertEqual(len(closestnodes), k)
+        # print(f"lookup operation with {size} nodes done in {summary['finishTime'] - summary['startTime']}")
+
+        # validation of the lookup closestnodes vs the actual closestnodes in the network
+        validationclosestnodes = {}
+        for nodeid in nodes:
+            node = n.nodestore.get_node(nodeid)
+            nodeH = Hash(node.ID)
+            dist = nodeH.xor_to_hash(segH)
+            validationclosestnodes[node.ID] = dist
+
+        validationclosestnodes = dict(sorted(validationclosestnodes.items(), key=lambda item: item[1])[:k])
+        for i, node in enumerate(closestnodes):
+            self.assertEqual((node in validationclosestnodes), True)
+
+
     def test_dht_interop_with_fast_init(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
         k = 10
