@@ -2,22 +2,6 @@ from collections import deque, defaultdict, OrderedDict
 from dht.hashes import Hash
 
 
-def optimalRTforDHTcli(dhtcli, nodes, bucketsize):
-    idsanddistperbucket = deque()
-    for nodeid, nodehash in nodes:
-        if nodeid == dhtcli.ID:
-            continue
-        sbits = dhtcli.hash.shared_upper_bits(nodehash)
-        dist = dhtcli.hash.xor_to_hash(nodehash)
-        while len(idsanddistperbucket) < sbits + 1:
-            idsanddistperbucket.append(deque())
-        idsanddistperbucket[sbits].append((nodeid, dist))
-    for b in idsanddistperbucket:
-        for iddist in sorted(b, key=lambda pair: pair[1])[:bucketsize]:
-            dhtcli.rt.new_discovered_peer(iddist[0])
-    return dhtcli
-
-
 class RoutingTable:
     def __init__(self, localnodeid:int, bucketsize:int) -> None:
         self.localnodeid = localnodeid

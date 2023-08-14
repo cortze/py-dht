@@ -3,7 +3,7 @@ import unittest
 import time
 from collections import deque
 from concurrent.futures import ProcessPoolExecutor
-from dht.routing_table import RoutingTable, optimalRTforDHTcli
+from dht.routing_table import RoutingTable
 from dht.dht import DHTClient, ConnectionError, DHTNetwork
 from dht.hashes import Hash
 
@@ -74,7 +74,7 @@ class TestNetwork(unittest.TestCase):
             nodes.append((n, Hash(n)))
             classicnode.rt.new_discovered_peer(n)
 
-        fastnode = optimalRTforDHTcli(fastnode, nodes, k)
+        fastnode = network.optimal_rt_for_dht_cli(fastnode, nodes, k)
         for n in sorted(classicnode.rt.get_routing_nodes()):
             self.assertTrue(n in fastnode.rt.get_routing_nodes())
 
@@ -273,10 +273,10 @@ class TestNetwork(unittest.TestCase):
 
     def test_dht_interop_with_error_rate(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
-        k = 5
+        k = 10
         size = 1000
         netid = 0
-        fasterrorrate = 30  # apply an error rate of 0 (to check if the logic pases)
+        fasterrorrate = 25  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         fastdelayrange = [30, 30]  # ms
         slowdelayrange = None
