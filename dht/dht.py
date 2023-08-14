@@ -115,13 +115,14 @@ class DHTClient:
                     lookupsummary['connectionFinished'] += 1
                     if len(mindelayedlookup[1]) > 0:
                         lookupsummary['successfulCons'] += 1
+                        # only if the connection was successful, we modify the stepsCnt 
+                        # conn failures don't count
+                        if has_closer_nodes(closestnodes, mindelayedlookup[1]):
+                            stepscnt = 0
+                        else:
+                            stepscnt += 1
                     else:
                         lookupsummary['failedCons'] += 1
-
-                    if has_closer_nodes(closestnodes, mindelayedlookup[1]):
-                        stepscnt = 0
-                    else:
-                        stepscnt += 1
 
                     # even if there is any closest one, update the list as more in between might have come
                     closestnodes.update(mindelayedlookup[1])
