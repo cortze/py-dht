@@ -327,7 +327,7 @@ class TestNetwork(unittest.TestCase):
         rnode = n.nodestore.get_node(randomid)
         self.assertNotEqual(rnode.network.len(), 0)
 
-        closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH)
+        closestnodes, val, summary, _ = rnode.lookup_for_hash(key=segH, trackaccuracy=True)
         self.assertEqual(val, "")  # empty val, nothing stored yet
         self.assertEqual(len(closestnodes), k)
         self.assertGreater(summary['accuracy'], targetaccuracy)
