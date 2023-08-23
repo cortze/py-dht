@@ -138,6 +138,7 @@ class DHTClient:
             'totalNodes': len(closestnodes),
             'aggrDelay': max(alpha_delays),
             'value': lookupvalue,
+            'accuracy': "unknown",
         })
 
         # limit the output to beta number of nodes
