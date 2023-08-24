@@ -39,7 +39,7 @@ class DHTClient:
         # Return the summary of the RoutingTable
         return self.rt.summary()
 
-    def lookup_for_hash(self, key: Hash, trackaccuracy: bool = False):
+    def lookup_for_hash(self, key: Hash, trackaccuracy: bool = False, finishwithfirstvalue: bool = True):
         """ search for the closest peers to any given key, starting the lookup for the closest nodes in 
         the local routing table, and contacting Alpha nodes in parallel """
         lookupsummary = {
@@ -73,8 +73,10 @@ class DHTClient:
         stepscnt = 0
 
         while (stepscnt < self.lookupsteptostop) and (len(nodestotry) > 0):
-            nodes = nodestotry.copy()
+            if finishwithfirstvalue and lookupvalue != "":
+                break
 
+            nodes = nodestotry.copy()
             for node in nodes:
                 nodestotry.pop(node)  # remove item from peers to attempt
                 if node in triednodes:  # make sure we don't contact the same node twice
@@ -174,7 +176,7 @@ class DHTClient:
             'aggrDelay': 0,
         }
         segH = Hash(segment)
-        closestnodes, _, lookupsummary, lookupdelay = self.lookup_for_hash(segH)
+        closestnodes, _, lookupsummary, lookupdelay = self.lookup_for_hash(segH, finishwithfirstvalue=False)
         providesummary['aggrDelay'] += lookupdelay
         for cn in closestnodes:
             try:
