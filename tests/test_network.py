@@ -104,7 +104,7 @@ class TestNetwork(unittest.TestCase):
         randomid = random.sample(range(1, size), 1)[0]
         rnode = network.nodestore.get_node(randomid)
 
-        closestnodes, _, _, _ = rnode.lookup_for_hash(segH)
+        closestnodes, _, _, _ = rnode.lookup_for_hash(segH, finishwithfirstvalue=False)
         network_closest = network.get_closest_nodes_to_hash(segH, b)
         for nodeid, _ in network_closest:
             self.assertEqual(nodeid in closestnodes, True)
@@ -529,7 +529,7 @@ class TestNetwork(unittest.TestCase):
         segH = Hash(randomSegment)
         interestednodeid = random.sample(range(1, size), 1)[0]
         inode = n.nodestore.get_node(interestednodeid)
-        closestnodes, _, summary, aggrdelay = inode.lookup_for_hash(segH)
+        closestnodes, _, summary, aggrdelay = inode.lookup_for_hash(segH, finishwithfirstvalue=False)
         self.assertEqual(len(closestnodes), k)
         rounds = int(summary['connectionFinished'] / alpha)
         if (summary['connectionFinished'] % alpha) > 0:
