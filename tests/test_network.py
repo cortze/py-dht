@@ -16,6 +16,7 @@ class TestNetwork(unittest.TestCase):
         id = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
         network, _ = generate_network(
@@ -24,6 +25,7 @@ class TestNetwork(unittest.TestCase):
             id,
             fasterrorrate,
             slowerrorrate,
+            conndelayrange,
             fastdelayrange,
             slowdelayrange)
         
@@ -56,16 +58,7 @@ class TestNetwork(unittest.TestCase):
         nodeid = 1
         steps4stop = 3
         size = 100
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        network = DHTNetwork(
-            nodeid,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
+        network = DHTNetwork(networkid=0)
         classicnode = DHTClient(nodeid, network, k, a, b, steps4stop)
         fastnode = DHTClient(nodeid, network, k, a, b, steps4stop)
 
@@ -81,23 +74,12 @@ class TestNetwork(unittest.TestCase):
     def test_networks_closest_peers_to_hash(self):
         """ test the routing table of a dht cli using the fast approach """
         k = 5
-        a = 1
+        a = 3
         b = k
-        nodeid = 1
         steps4stop = 3
         size = 1000
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        network = DHTNetwork(
-            nodeid,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
-
-        nodes = network.init_with_random_peers(1, size, k, 3, k, 3)
+        network = DHTNetwork(networkid=0)
+        _ = network.init_with_random_peers(1, size, k, a, k, steps4stop)
 
         randomsegment = "this is a simple segment of code"
         segH = Hash(randomsegment)
@@ -116,16 +98,7 @@ class TestNetwork(unittest.TestCase):
         b = k
         step4stop = 3
         size = 1000
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        network = DHTNetwork(
-            0,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
+        network = DHTNetwork(networkid=0)
         network.init_with_random_peers(1, size, k, a, b, step4stop)
 
         for nodeid in range(size):
@@ -147,16 +120,7 @@ class TestNetwork(unittest.TestCase):
         step4stop = 3
         size = 1000
         threads = 2
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        network = DHTNetwork(
-            0,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
+        network = DHTNetwork(networkid=0)
         network.init_with_random_peers(threads, size, k, a, b, step4stop)
 
         for nodeid in range(size):
@@ -178,16 +142,7 @@ class TestNetwork(unittest.TestCase):
         step4stop = 3
         size = 1000
         threads = 4
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        network = DHTNetwork(
-            0,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
+        network = DHTNetwork(networkid=0)
         start = time.time()
         _ = network.init_with_random_peers(threads, size, k, a, b, step4stop)
         print(f'{size} nodes in {time.time() - start} - {threads} cores')
@@ -198,6 +153,7 @@ class TestNetwork(unittest.TestCase):
         size = 200
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndalayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
         network, nodes = generate_network(
@@ -206,6 +162,7 @@ class TestNetwork(unittest.TestCase):
             id,
             fasterrorrate,
             slowerrorrate,
+            conndalayrange,
             fastdelayrange,
             slowdelayrange)
 
@@ -224,6 +181,7 @@ class TestNetwork(unittest.TestCase):
         id = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
         _, nodes = generate_network(
@@ -232,6 +190,7 @@ class TestNetwork(unittest.TestCase):
             id,
             fasterrorrate,
             slowerrorrate,
+            conndelayrange,
             fastdelayrange,
             slowdelayrange)
 
@@ -264,19 +223,13 @@ class TestNetwork(unittest.TestCase):
     def test_dht_interop_with_alpha(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
         k = 10
+        a = 3
+        b = k
+        steps4stop = 3
         size = 500
         netid = 0
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        n = DHTNetwork(
-            netid,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
-        nodes = n.init_with_random_peers(1, size, k, 3, k, 3)
+        n = DHTNetwork(networkid=netid)
+        nodes = n.init_with_random_peers(1, size, k, a, b, steps4stop)
 
         randomsegment = "this is a simple segment of code"
         segH = Hash(randomsegment)
@@ -310,15 +263,17 @@ class TestNetwork(unittest.TestCase):
         targetaccuracy = 70  # %
         fasterrorrate = 25  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndelayrange = [30, 30]  # ms
         fastdelayrange = [30, 30]  # ms
         slowdelayrange = None
         n = DHTNetwork(
             netid,
             fasterrorrate,
             slowerrorrate,
+            conndelayrange,
             fastdelayrange,
             slowdelayrange)
-        nodes = n.init_with_random_peers(1, size, k, 3, k, 3)
+        n.init_with_random_peers(1, size, k, 3, k, 3)
 
         randomsegment = "this is a simple segment of code"
         segH = Hash(randomsegment)
@@ -336,20 +291,14 @@ class TestNetwork(unittest.TestCase):
     def test_dht_interop_with_fast_init(self):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
         k = 10
+        a = 1
+        b = k
+        steps4stop = 3
         size = 500
-        i = 0
+        netid = 0
         jobs = 4
-        fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
-        slowerrorrate = 0
-        fastdelayrange = None  # ms
-        slowdelayrange = None
-        n = DHTNetwork(
-            i,
-            fasterrorrate,
-            slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
-        _ = n.init_with_random_peers(jobs, size, k, 1, k, 3)
+        n = DHTNetwork(networkid=netid)
+        n.init_with_random_peers(jobs, size, k, a, b, steps4stop)
 
         randomsegment = "this is a simple segment of code"
         segH = Hash(randomsegment)
@@ -381,6 +330,7 @@ class TestNetwork(unittest.TestCase):
         id = 0
         fasterrorrate = 20  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
         network, nodes = generate_network(
@@ -389,6 +339,7 @@ class TestNetwork(unittest.TestCase):
             id,
             fasterrorrate,
             slowerrorrate,
+            conndelayrange,
             fastdelayrange,
             slowdelayrange)
         for node in nodes:
@@ -417,6 +368,7 @@ class TestNetwork(unittest.TestCase):
         id = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
+        conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
         _, nodes = generate_network(
@@ -425,6 +377,7 @@ class TestNetwork(unittest.TestCase):
             id,
             fasterrorrate,
             slowerrorrate,
+            conndelayrange,
             fastdelayrange,
             slowdelayrange)
         for node in nodes:
@@ -455,9 +408,10 @@ class TestNetwork(unittest.TestCase):
         slowerrorrate = 0
         maxDelay = 101
         minDelay = 10
-
         delayrange = range(minDelay, maxDelay, 10)  # ms
-        slowdelay = None
+        fasterrordelayrange = None
+        slowerrordelayrange = None
+
         _, nodes = generate_network(
             k,
             size,
@@ -465,7 +419,8 @@ class TestNetwork(unittest.TestCase):
             fasterrorrate,
             slowerrorrate,
             delayrange,
-            slowdelay)
+            fasterrordelayrange,
+            slowerrordelayrange)
         for node in nodes:
             node.bootstrap()
 
@@ -512,11 +467,12 @@ class TestNetwork(unittest.TestCase):
         slowerrorrate = 0
 
         delay = 50  # ms
+        conndelayrange = [delay, delay]  # ms
         fastdelayrange = [delay, delay]  # ms
         slowdelayrate = None
 
         # init the network
-        n = DHTNetwork(i, fasterrorrate, slowerrorrate, fastdelayrange, slowdelayrate)
+        n = DHTNetwork(i, fasterrorrate, slowerrorrate, conndelayrange, fastdelayrange, slowdelayrate)
         _ = n.init_with_random_peers(jobs, size, k, alpha, beta, stepstostop)
 
         # use random node as lookup point
@@ -537,13 +493,14 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(aggrdelay, rounds * (delay*2))
 
 
-def generate_network(k, size, netid, fasterrorrate, slowerrorrate, fastdelayrange, slowdelayrange):
+def generate_network(k, size, netid, fasterrorrate, slowerrorrate, conndalayrange, fasterrordelayrange, slowerrordelayrange):
     network = DHTNetwork(
             netid,
             fasterrorrate,
             slowerrorrate,
-            fastdelayrange,
-            slowdelayrange)
+            conndalayrange,
+            fasterrordelayrange,
+            slowerrordelayrange)
     nodeids = range(0, size, 1)
     nodes = []
     for i in nodeids:
