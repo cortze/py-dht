@@ -128,6 +128,7 @@ if __name__ == "__main__":
     args.add_argument('-i')  # number of iterations (for statistical robustness)
     args.add_argument('-k')  # bucket size
     args.add_argument('-n')  # network size (to compose the rt)
+    args.add_argument('--threads')  # network size (to compose the rt)
     a = args.parse_args()
     main(a)
 

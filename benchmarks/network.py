@@ -54,7 +54,7 @@ def main(args):
 
 def gen_network(k: int, network_size: int):
     node_ids = random.sample(range(network_size), network_size)
-    network = DHTNetwork(networkid=0, errorrate=0, delayrange=None)
+    network = DHTNetwork(networkid=0)
     for node in node_ids:
         node = DHTClient(node, network, k, a=3, b=k, steptostop=5)
         network.add_new_node(node)
@@ -136,9 +136,7 @@ def dht_network_fast_bootstrap(tag_base: str, i: int, k: int, network_size: int)
 
     def task() -> float:
         # init
-        errorrate = 0
-        delayrange = None
-        network = DHTNetwork(0, errorrate, delayrange)
+        network = DHTNetwork(networkid=0)
 
         # measurement
         start = time.time()
@@ -159,9 +157,7 @@ def dht_network_fast_threaded_bootstrap(tag_base: str, threads:int, i: int, k: i
 
     def task() -> float:
         # init
-        errorrate = 0
-        delayrange = None
-        network = DHTNetwork(0, errorrate, delayrange)
+        network = DHTNetwork(networkid=0)
 
         # measurement
         start = time.time()

@@ -289,11 +289,12 @@ class DHTNetwork:
     """ serves a the shared point between all the nodes participating in the simulation,
     allows node to communicat with eachother without needing to implement an API or similar"""
 
-    def __init__(self, networkid: int, fasterrorrate: int, slowerrorrate: int, fastdelayrange, slowdelay):
+    def __init__(self, networkid: int, fasterrorrate: int=0, slowerrorrate: int=0, conndelayrange = None, fastdelayrange = None, slowdelay = None):
         """ class initializer, it allows to define the networkID and the delays between nodes """
         self.networkid = networkid
         self.fasterrorrate = fasterrorrate  # %
         self.slowerrorrate = slowerrorrate  # %
+        self.conndelatrange = conndelayrange
         self.fastdelayrange = fastdelayrange  # list() in ms -> i.e., (5, 100) ms | None
         self.slowdelay = slowdelay  # timeot delay
         self.nodestore = NodeStore()
@@ -388,7 +389,7 @@ class DHTNetwork:
                 connerror = ConnectionError(targetnode, "slow error", time.time(), self.slowdelay)
                 self.errortracker.append(connerror)
                 raise connerror
-            connection = Connection(self.connectioncnt, ognode, self.nodestore.get_node(targetnode), self.fastdelayrange)
+            connection = Connection(self.connectioncnt, ognode, self.nodestore.get_node(targetnode), self.conndelatrange)
             self.connectiontracker.append({
                 'time': time.time(),
                 'from': ognode,
