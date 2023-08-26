@@ -13,21 +13,23 @@ class TestNetwork(unittest.TestCase):
         # configuration of the DHTnetwork
         k = 20
         size = 200
-        id = 0
+        netid = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
+        overhead = 0
         network, _ = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
             conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
         
         # check total size of the network
         totalnodes = network.nodestore.len()
@@ -151,20 +153,23 @@ class TestNetwork(unittest.TestCase):
         """ test that the routing tables for each nodeID are correctly initialized """
         k = 2
         size = 200
+        netid=0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
-        conndalayrange = None
+        conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
+        overhead = 0
         network, nodes = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
-            conndalayrange,
+            conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
 
         for node in nodes:
             summary = node.bootstrap()
@@ -178,21 +183,23 @@ class TestNetwork(unittest.TestCase):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """ 
         k = 10
         size = 500
-        id = 0
+        netid = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
+        overhead = 0
         _, nodes = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
             conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
 
         for node in nodes:
             node.bootstrap()
@@ -266,13 +273,15 @@ class TestNetwork(unittest.TestCase):
         conndelayrange = [30, 30]  # ms
         fastdelayrange = [30, 30]  # ms
         slowdelayrange = None
+        overhead = 0
         n = DHTNetwork(
             netid,
             fasterrorrate,
             slowerrorrate,
             conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
         n.init_with_random_peers(1, size, k, 3, k, 3)
 
         randomsegment = "this is a simple segment of code"
@@ -327,21 +336,23 @@ class TestNetwork(unittest.TestCase):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """
         k = 1
         size = 2
-        id = 0
+        netid = 0
         fasterrorrate = 20  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
+        overhead = 0
         network, nodes = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
             conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
         for node in nodes:
             node.bootstrap()
 
@@ -365,21 +376,23 @@ class TestNetwork(unittest.TestCase):
         """ test if the nodes in the network actually route to the closest peer, and implicidly, if the DHTclient interface works """ 
         k = 10
         size = 500 
-        id = 0
+        netid = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         conndelayrange = None
         fastdelayrange = None  # ms
         slowdelayrange = None
+        overhead = 0
         _, nodes = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
             conndelayrange,
             fastdelayrange,
-            slowdelayrange)
+            slowdelayrange,
+            overhead)
         for node in nodes:
             node.bootstrap()
    
@@ -403,7 +416,7 @@ class TestNetwork(unittest.TestCase):
         """ test if the interaction between the nodes in the network actually generate a compounded delay """
         k = 10
         size = 500
-        id = 0
+        netid = 0
         fasterrorrate = 0  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         maxDelay = 101
@@ -411,16 +424,17 @@ class TestNetwork(unittest.TestCase):
         delayrange = range(minDelay, maxDelay, 10)  # ms
         fasterrordelayrange = None
         slowerrordelayrange = None
-
+        overhead = 0
         _, nodes = generate_network(
             k,
             size,
-            id,
+            netid,
             fasterrorrate,
             slowerrorrate,
             delayrange,
             fasterrordelayrange,
-            slowerrordelayrange)
+            slowerrordelayrange,
+            overhead)
         for node in nodes:
             node.bootstrap()
 
@@ -453,6 +467,44 @@ class TestNetwork(unittest.TestCase):
         worstdelay = totdelays * maxDelay
         self.assertGreater(aggrdelay, bestdelay)
         self.assertLess(aggrdelay, worstdelay)
+
+    def test_gamma_overhead(self):
+        """ test if the interaction between the nodes in the network actually generate a compounded delay """
+        netid = 0
+        jobs = 2
+        size = 500
+        k = 10
+        a = 1
+        b = k
+        stepstop = 3
+        overhead = 1
+        network = DHTNetwork(
+            networkid=netid,
+            gammaoverhead=overhead,
+        )
+
+        network.init_with_random_peers(jobs, size, k, a, b, stepstop)
+
+        randomSegment = "this is a simple segment of code"
+        segH = Hash(randomSegment)
+        # use random node as lookup point
+        publishernodeid = random.sample(range(1, size), 1)[0]
+        pnode = network.nodestore.get_node(publishernodeid)
+        self.assertNotEqual(pnode.network.len(), 0)
+
+        providesummary, aggrdelay = pnode.provide_block_segment(randomSegment)
+        self.assertEqual(len(providesummary["closestNodes"]), k)
+
+        interestednodeid = random.sample(range(1, size), 1)[0]
+        inode = network.nodestore.get_node(interestednodeid)
+        closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH)
+        self.assertEqual(randomSegment, val)
+
+        supossed_overhead = 0
+        for i in range(summary['successfulCons']+1):
+            supossed_overhead += i*overhead
+        self.assertEqual(aggrdelay, supossed_overhead)
+
 
     def test_aggregated_delays_and_alpha(self):
         """ test if the interaction between the nodes in the network actually generate a compounded delay """
@@ -493,14 +545,15 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(aggrdelay, rounds * (delay*2))
 
 
-def generate_network(k, size, netid, fasterrorrate, slowerrorrate, conndalayrange, fasterrordelayrange, slowerrordelayrange):
+def generate_network(k, size, netid, fasterrorrate, slowerrorrate, conndalayrange, fasterrordelayrange, slowerrordelayrange, overhead):
     network = DHTNetwork(
             netid,
             fasterrorrate,
             slowerrorrate,
             conndalayrange,
             fasterrordelayrange,
-            slowerrordelayrange)
+            slowerrordelayrange,
+            overhead)
     nodeids = range(0, size, 1)
     nodes = []
     for i in nodeids:
