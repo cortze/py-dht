@@ -477,7 +477,7 @@ class TestNetwork(unittest.TestCase):
         a = 1
         b = k
         stepstop = 3
-        overhead = 1
+        overhead = 0.250
         network = DHTNetwork(
             networkid=netid,
             gammaoverhead=overhead,
@@ -500,9 +500,8 @@ class TestNetwork(unittest.TestCase):
         closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH)
         self.assertEqual(randomSegment, val)
 
-        supossed_overhead = 0
-        for i in range(summary['successfulCons']+1):
-            supossed_overhead += i*overhead
+        supossed_overhead = summary['successfulCons']*overhead
+        print(supossed_overhead, aggrdelay)
         self.assertEqual(aggrdelay, supossed_overhead)
 
 
