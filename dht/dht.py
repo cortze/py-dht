@@ -514,7 +514,7 @@ class DHTNetwork:
             'origin_overhead': [],
             'remote_overhead': [],
             'total_overhead': [],
-            'final_delay': [],
+            'total_delay': [],
         }
         for conn in (self.connection_tracker + self.error_tracker):
             network_metrics['conn_id'].append(conn['id'])

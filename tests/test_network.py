@@ -505,6 +505,9 @@ class TestNetwork(unittest.TestCase):
         supossed_overhead = summary['connectionFinished'] * overhead * 2
         self.assertEqual(supossed_overhead, aggrdelay)
 
+        network.connection_metrics()
+
+
 
     def test_aggregated_delays_and_alpha(self):
         """ test if the interaction between the nodes in the network actually generate a compounded delay """
