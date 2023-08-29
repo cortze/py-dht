@@ -502,8 +502,7 @@ class TestNetwork(unittest.TestCase):
         closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH, finishwithfirstvalue=True)
         self.assertEqual(randomSegment, val)
 
-        supossed_overhead = summary['connectionFinished']* overhead * 2
-        print(supossed_overhead, aggrdelay)
+        supossed_overhead = summary['connectionFinished'] * overhead * 2
         self.assertEqual(supossed_overhead, aggrdelay)
 
 

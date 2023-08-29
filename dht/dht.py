@@ -262,13 +262,13 @@ class ConnectionError(Exception):
         self.remote_overhead = remote_overhead
         self.delay = delay
         self.total_overhead = origin_overhead + remote_overhead
-        self.final_delay = self.delay + self.total_overhead
+        self.total_delay = self.delay + self.total_overhead
     
     def description(self) -> str:
         return f"unable to connect node {self.to} from {self.f}. {self.error}"
 
     def get_delay(self):
-        return self.final_delay
+        return self.total_delay
 
     def error_type(self):
         return self.error
@@ -284,7 +284,7 @@ class ConnectionError(Exception):
             'origin_overhead': self.origin_overhead,
             'remote_overhead': self.remote_overhead,
             'total_overhead': self.total_overhead,
-            'total_delay': self.final_delay,
+            'total_delay': self.total_delay,
         }
 
 
@@ -299,19 +299,19 @@ class Connection:
         self.origin_overhead = originoverhead
         self.remote_overhead = remoteoverhead
         self.total_overhead = originoverhead + remoteoverhead
-        self.final_delay = delay + self.total_overhead
+        self.total_delay = delay + self.total_overhead
 
     def get_closest_nodes_to(self, key: Hash):
         closer_nodes, val, ok = self.to.get_closest_nodes_to(key)
-        return closer_nodes, val, ok, self.final_delay
+        return closer_nodes, val, ok, self.total_delay
 
     def store_segment(self, segment):
         self.to.store_segment(segment)
-        return self.final_delay
+        return self.total_delay
 
     def retrieve_segment(self, key: Hash):
         seg, ok = self.to.retrieve_segment(key)
-        return seg, ok, self.final_delay
+        return seg, ok, self.total_delay
 
     def summary(self):
         return {
@@ -320,11 +320,11 @@ class Connection:
             'from': self.f,
             'to': self.to.ID,
             'error': "None",
-            'delay': self.delay,
+            'base_delay': self.delay,
             'origin_overhead': self.origin_overhead,
             'remote_overhead': self.remote_overhead,
             'total_overhead': self.total_overhead,
-            'total_delay': self.final_delay,
+            'total_delay': self.total_delay,
         }
 
 
@@ -510,8 +510,11 @@ class DHTNetwork:
             'from': [],
             'to': [],
             'error': [],
-            'delay': [],
-            'overhead': []
+            'base_delay': [],
+            'origin_overhead': [],
+            'remote_overhead': [],
+            'total_overhead': [],
+            'final_delay': [],
         }
         for conn in (self.connection_tracker + self.error_tracker):
             network_metrics['conn_id'].append(conn['id'])
@@ -519,8 +522,11 @@ class DHTNetwork:
             network_metrics['from'].append(conn['from'])
             network_metrics['to'].append(conn['to'])
             network_metrics['error'].append(conn['error'])
-            network_metrics['delay'].append(conn['delay'])
-            network_metrics['overhead'].append(conn['overhead'])
+            network_metrics['base_delay'].append(conn['base_delay'])
+            network_metrics['origin_overhead'].append(conn['origin_overhead'])
+            network_metrics['remote_overhead'].append(conn['remote_overhead'])
+            network_metrics['total_overhead'].append(conn['total_overhead'])
+            network_metrics['total_delay'].append(conn['total_delay'])
         return network_metrics
 
 
