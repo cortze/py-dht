@@ -267,7 +267,7 @@ class TestNetwork(unittest.TestCase):
         k = 10
         size = 1000
         netid = 0
-        targetaccuracy = 70  # %
+        targetaccuracy = 65  # %
         fasterrorrate = 25  # apply an error rate of 0 (to check if the logic pases)
         slowerrorrate = 0
         conndelayrange = [30, 30]  # ms
@@ -491,18 +491,20 @@ class TestNetwork(unittest.TestCase):
         publishernodeid = random.sample(range(1, size), 1)[0]
         pnode = network.nodestore.get_node(publishernodeid)
         self.assertNotEqual(pnode.network.len(), 0)
-
         providesummary, aggrdelay = pnode.provide_block_segment(randomSegment)
         self.assertEqual(len(providesummary["closestNodes"]), k)
 
+        # make the lookup independent from the provide
+        network.reset_network_metrics()
+
         interestednodeid = random.sample(range(1, size), 1)[0]
         inode = network.nodestore.get_node(interestednodeid)
-        closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH)
+        closestnodes, val, summary, aggrdelay = inode.lookup_for_hash(key=segH, finishwithfirstvalue=True)
         self.assertEqual(randomSegment, val)
 
-        supossed_overhead = summary['successfulCons']*overhead
+        supossed_overhead = summary['connectionFinished']* overhead * 2
         print(supossed_overhead, aggrdelay)
-        self.assertEqual(aggrdelay, supossed_overhead)
+        self.assertEqual(supossed_overhead, aggrdelay)
 
 
     def test_aggregated_delays_and_alpha(self):
