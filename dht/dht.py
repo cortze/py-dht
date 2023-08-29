@@ -62,7 +62,7 @@ class DHTClient:
                         continue
             return False
 
-        base_overhead = self.network.connection_overheads.get_overhead_for_node(self.ID)
+        origin_overhead = self.network.connection_overheads.get_overhead_for_node(self.ID)
         closestnodes = self.rt.get_closest_nodes_to(key)
         nodestotry = closestnodes.copy()
         triednodes = deque()
@@ -84,15 +84,15 @@ class DHTClient:
                     continue
                 triednodes.append(node)
                 lookupsummary['connectionAttempts'] += 1
-
+                remote_overhead = self.network.connection_overheads.get_overhead_for_node(node)
                 try:
-                    connection, conndelay = self.network.connect_to_node(self.ID, node, base_overhead)
+                    connection, conndelay = self.network.connect_to_node(self.ID, node, origin_overhead, remote_overhead)
                     newnodes, val, _, closestdelay = connection.get_closest_nodes_to(key)
                     # we only want to aggregate the difference between the base + conn delay - the already aggregated one
                     # this allows to simulate de delay of a proper scheduler
                     operationdelay = (conndelay + closestdelay)
                     if len(alpha_results) < self.alpha:
-                        alpha_results.append((operationdelay, newnodes, val, base_overhead))
+                        alpha_results.append((operationdelay, newnodes, val, origin_overhead + remote_overhead))
                         alpha_results = deque(sorted(alpha_results, key=lambda pair: pair[0]))
                     else:
                         print("huge error here")
@@ -100,7 +100,7 @@ class DHTClient:
                 except ConnectionError as e:
                     errortype = e.error_type()
                     errordelay = e.get_delay()
-                    alpha_results.append((errordelay, {}, "", base_overhead))
+                    alpha_results.append((errordelay, {}, "", origin_overhead + remote_overhead))
                     alpha_results = deque(sorted(alpha_results, key=lambda pair: pair[0]))
 
                 # check if the concurrency array is full
@@ -181,9 +181,10 @@ class DHTClient:
         closestnodes, _, lookupsummary, lookupdelay = self.lookup_for_hash(segH, finishwithfirstvalue=False)
         provAggrDelay = []
         for cn in closestnodes:
-            overhead = self.network.connection_overheads.get_overhead_for_node(cn)
+            origin_overhead = self.network.connection_overheads.get_overhead_for_node(self.ID)
+            remote_overhead = self.network.connection_overheads.get_overhead_for_node(cn)
             try:
-                connection, conndelay = self.network.connect_to_node(self.ID, cn, overhead)
+                connection, conndelay = self.network.connect_to_node(self.ID, cn, origin_overhead, remote_overhead)
                 storedelay = connection.store_segment(segment)
                 provAggrDelay.append(conndelay+storedelay)
                 providesummary['succesNodeIDs'].append(cn)
@@ -251,20 +252,23 @@ class NodeStore():
 
 class ConnectionError(Exception):
     """ custom connection error exection to notify an errored connection """ 
-    def __init__(self, err_id: int, f: int, to: int, error: str, delay, gamma):
+    def __init__(self, err_id: int, f: int, to: int, error: str, delay, origin_overhead, remote_overhead):
         self.error_id = err_id
         self.f = f
         self.to = to
         self.error = error
         self.time = time.time()
+        self.origin_overhead = origin_overhead
+        self.remote_overhead = remote_overhead
         self.delay = delay
-        self.overhead = gamma
+        self.total_overhead = origin_overhead + remote_overhead
+        self.total_delay = self.delay + self.total_overhead
     
     def description(self) -> str:
         return f"unable to connect node {self.to} from {self.f}. {self.error}"
 
     def get_delay(self):
-        return self.delay+self.overhead
+        return self.total_delay
 
     def error_type(self):
         return self.error
@@ -276,31 +280,38 @@ class ConnectionError(Exception):
             'from': self.f,
             'to': self.to,
             'error': self.error,
-            'delay': self.delay,
-            'overhead': self.overhead}
+            'base_delay': self.delay,
+            'origin_overhead': self.origin_overhead,
+            'remote_overhead': self.remote_overhead,
+            'total_overhead': self.total_overhead,
+            'total_delay': self.total_delay,
+        }
 
-class Connection():
+
+class Connection:
     """ connection simbolizes the interaction that 2 DHTClients could have with each other """
-    def __init__(self, conn_id: int, f: int, to: DHTClient, delay, overhead):
+    def __init__(self, conn_id: int, f: int, to: DHTClient, delay, originoverhead, remoteoverhead):
         self.conn_id = conn_id
         self.time = time.time()
         self.f = f
         self.to = to
         self.delay = delay
-        self.overhead = overhead
-        self.final_delay = delay + overhead
+        self.origin_overhead = originoverhead
+        self.remote_overhead = remoteoverhead
+        self.total_overhead = originoverhead + remoteoverhead
+        self.total_delay = delay + self.total_overhead
 
     def get_closest_nodes_to(self, key: Hash):
         closer_nodes, val, ok = self.to.get_closest_nodes_to(key)
-        return closer_nodes, val, ok, self.final_delay
+        return closer_nodes, val, ok, self.total_delay
 
     def store_segment(self, segment):
         self.to.store_segment(segment)
-        return self.final_delay
+        return self.total_delay
 
     def retrieve_segment(self, key: Hash):
         seg, ok = self.to.retrieve_segment(key)
-        return seg, ok, self.final_delay
+        return seg, ok, self.total_delay
 
     def summary(self):
         return {
@@ -309,9 +320,13 @@ class Connection():
             'from': self.f,
             'to': self.to.ID,
             'error': "None",
-            'delay': self.delay,
-            'overhead': self.overhead,
+            'base_delay': self.delay,
+            'origin_overhead': self.origin_overhead,
+            'remote_overhead': self.remote_overhead,
+            'total_overhead': self.total_overhead,
+            'total_delay': self.total_delay,
         }
+
 
 class OverheadTracker:
     """keeps tracks of the overhead for each node in the network, which will be increased
@@ -360,7 +375,7 @@ class DHTNetwork:
         for cliid, cli in self.nodestore.nodes.items():
             dist = cli.hash.xor_to_hash(target)
             closestnodes.append((cliid, dist))
-        return sorted(closestnodes, key=lambda dist: dist[1])[:beta] 
+        return sorted(closestnodes, key=lambda dist: dist[1])[:beta]
 
     def optimal_rt_for_dht_cli(self, dhtcli, nodes, bucketsize):
         idsanddistperbucket = deque()
@@ -428,7 +443,7 @@ class DHTNetwork:
         """ add a new node to the DHT network """
         self.nodestore.add_node(newnode)
 
-    def connect_to_node(self, ognode: int, targetnode: int, overhead: float = 0.0):
+    def connect_to_node(self, ognode: int, targetnode: int, originoverhead: float = 0.0, remoteoverhead: float = 0.0):
         """ get connection to the DHTclient target from the PeerStore
          and an associated delay or raise an error """
         self.connectioncnt += 1
@@ -444,27 +459,27 @@ class DHTNetwork:
         try:
             # check the error rate (avoid stablishing the connection if there is an error)
             if random.randint(0, 99) < self.fasterrorrate:
-                conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "fast", fast_delay, overhead)
+                conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "fast", fast_delay, originoverhead, remoteoverhead)
                 self.error_tracker.append(conn_error.summary())
                 raise conn_error
             if random.randint(0, 99) < self.slowerrorrate:
-                conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "slow", slow_delay, overhead)
+                conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "slow", slow_delay, originoverhead, remoteoverhead)
                 self.error_tracker.append(conn_error.summary())
                 raise conn_error
-            connection = Connection(self.connectioncnt, ognode, self.nodestore.get_node(targetnode), conn_delay, overhead)
+            connection = Connection(self.connectioncnt, ognode, self.nodestore.get_node(targetnode), conn_delay, originoverhead, remoteoverhead)
             self.connection_tracker.append(connection.summary())
             return connection, connection.delay
 
         except NodeNotInStoreError:
-            conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "node_not_found", slow_delay, overhead)
+            conn_error = ConnectionError(self.connectioncnt, ognode, targetnode, "node_not_found", slow_delay, originoverhead, remoteoverhead)
             self.error_tracker.append(conn_error.summary())
             raise conn_error
 
     def bootstrap_node(self, nodeid: int, bucketsize: int):  # ( accuracy: int = 100 )
-        """ checks among all the existing nodes in the network, which are the correct ones to 
+        """ checks among all the existing nodes in the network, which are the correct ones to
         fill up the routing table of the given node """
-        # best way to know which nodes are the best nodes for a routing table, is to compose a rt itself 
-        # Accuracy = How many closest peers / K closest peers do we know (https://github.com/plprobelab/network-measurements/blob/master/results/rfm19-dht-routing-table-health.md) 
+        # best way to know which nodes are the best nodes for a routing table, is to compose a rt itself
+        # Accuracy = How many closest peers / K closest peers do we know (https://github.com/plprobelab/network-measurements/blob/master/results/rfm19-dht-routing-table-health.md)
         # TODO: generate a logic that selects the routing table with the given accuracy
         rt = RoutingTable(nodeid, bucketsize)
         for node in self.nodestore.get_nodes():
@@ -480,7 +495,7 @@ class DHTNetwork:
         self.connection_overheads.reset_overheads()
 
     def summary(self):
-        """ return the summary of what happened in the network """  
+        """ return the summary of what happened in the network """
         return {
             'total_nodes': self.nodestore.len(),
             'attempts': self.connectioncnt,
@@ -495,8 +510,11 @@ class DHTNetwork:
             'from': [],
             'to': [],
             'error': [],
-            'delay': [],
-            'overhead': []
+            'base_delay': [],
+            'origin_overhead': [],
+            'remote_overhead': [],
+            'total_overhead': [],
+            'total_delay': [],
         }
         for conn in (self.connection_tracker + self.error_tracker):
             network_metrics['conn_id'].append(conn['id'])
@@ -504,13 +522,14 @@ class DHTNetwork:
             network_metrics['from'].append(conn['from'])
             network_metrics['to'].append(conn['to'])
             network_metrics['error'].append(conn['error'])
-            network_metrics['delay'].append(conn['delay'])
-            network_metrics['overhead'].append(conn['overhead'])
+            network_metrics['base_delay'].append(conn['base_delay'])
+            network_metrics['origin_overhead'].append(conn['origin_overhead'])
+            network_metrics['remote_overhead'].append(conn['remote_overhead'])
+            network_metrics['total_overhead'].append(conn['total_overhead'])
+            network_metrics['total_delay'].append(conn['total_delay'])
         return network_metrics
 
 
     def len(self) -> int:
         return self.nodestore.len()
-
-
 
