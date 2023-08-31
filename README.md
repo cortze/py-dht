@@ -1,4 +1,4 @@
-# py-dht
+# py-dht &middot; ![](https://github.com/cortze/py-dht/actions/workflows/unitary_tests.yml/badge.svg)
 small and straightforward representation of how a kademlia-based dht could be integrated into ethereum, particularly at [das-research](https://github.com/codex-storage/das-research).
 
 ## What can this dht do?
